@@ -10,5 +10,5 @@ use self::{apci::Apci, asdu::Asdu};
 #[derive(Debug)]
 pub struct Apdu {
     pub apci: Apci,
-    pub apdu: Asdu,
+    pub asdu: Option<Asdu>,
 }

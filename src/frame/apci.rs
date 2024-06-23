@@ -20,7 +20,7 @@ pub const U_STOPDT_CONFIRM: u8 = 0x20; // 停止确认
 pub const U_TESTFR_ACTIVE: u8 = 0x40; // 测试激活
 pub const U_TESTFR_CONFIRM: u8 = 0x80; // 测试确认
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Apci {
     pub start: u8,
     pub apdu_length: u8,
@@ -44,4 +44,31 @@ pub struct UApci {
 #[derive(Debug)]
 pub struct SApci {
     pub rcv_sn: u16,
+}
+
+pub enum ApciKind {
+    I(IApci),
+    U(UApci),
+    S(SApci),
+}
+
+impl From<Apci> for ApciKind {
+    fn from(apci: Apci) -> Self {
+        if apci.ctrl1 & 0x01 == 0 {
+            return ApciKind::I(IApci {
+                send_sn: ((apci.ctrl1 as u16) >> 1) + ((apci.ctrl2 as u16) << 7),
+                rcv_sn: ((apci.ctrl3 as u16) >> 1) + ((apci.ctrl4 as u16) << 7),
+            });
+        }
+
+        if apci.ctrl1 & 0x03 == 0x01 {
+            return ApciKind::S(SApci {
+                rcv_sn: ((apci.ctrl3 as u16) >> 1) + ((apci.ctrl4 as u16) << 7),
+            });
+        }
+
+        ApciKind::U(UApci {
+            function: apci.ctrl1 & 0xfc,
+        })
+    }
 }

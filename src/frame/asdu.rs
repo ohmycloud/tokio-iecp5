@@ -3,7 +3,7 @@ use std::io::Cursor;
 use anyhow::{anyhow, Result};
 use bit_struct::*;
 use byteorder::{LittleEndian, ReadBytesExt};
-use bytes::{Buf, Bytes};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use chrono::{DateTime, Datelike, TimeZone, Timelike, Utc};
 
 // ASDUSizeMax asdu max size
@@ -29,7 +29,7 @@ const INVALID_COMMON_ADDR: u16 = 0;
 #[allow(dead_code)]
 const GLOBAL_COMMON_ADDR: u16 = 65535;
 
-const IDENTIFIER_SIZE: usize = 5;
+pub const IDENTIFIER_SIZE: usize = 5;
 
 #[derive(Debug)]
 pub struct Asdu {
@@ -334,6 +334,21 @@ impl TryFrom<Bytes> for Asdu {
     }
 }
 
+impl TryInto<Bytes> for Asdu {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<Bytes, Self::Error> {
+        let mut buf = BytesMut::with_capacity(ASDU_SIZE_MAX);
+        buf.put_u8(self.identifier.type_id as u8);
+        buf.put_u8(self.identifier.variable_struct.raw());
+        buf.put_u8(self.identifier.cause.raw());
+        buf.put_u16(self.identifier.common_addr);
+        buf.extend(self.raw);
+
+        Ok(buf.freeze())
+    }
+}
+
 /// 通过raw解析成Obj
 impl Asdu {
     // CP56Time2a , CP24Time2a, CP16Time2a
@@ -404,10 +419,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn decode_asdu() -> Result<()> {
+    fn decode_and_encode_asdu() -> Result<()> {
         let bytes =
             Bytes::from_static(&[0x01, 0x01, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03]);
-        let mut asdu: Asdu = bytes.try_into()?;
+        let mut asdu: Asdu = bytes.clone().try_into()?;
         assert!(asdu.identifier.type_id == TypeID::M_SP_NA_1);
         assert_eq!(asdu.identifier.variable_struct.number().get().value(), 0x01);
         assert_eq!(asdu.identifier.cause.cause().get(), Cause::Activation);
@@ -416,6 +431,9 @@ mod tests {
             asdu.raw,
             Bytes::from_static(&[0x60, 0x00, 0x01, 0x02, 0x03])
         );
+
+        let raw: Bytes = asdu.try_into().unwrap();
+        assert_eq!(bytes, raw);
         Ok(())
     }
 }
