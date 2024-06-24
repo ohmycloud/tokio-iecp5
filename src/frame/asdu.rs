@@ -2,9 +2,8 @@ use std::io::Cursor;
 
 use anyhow::{anyhow, Result};
 use bit_struct::*;
-use byteorder::{LittleEndian, ReadBytesExt};
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-use chrono::{DateTime, Datelike, TimeZone, Timelike, Utc};
+use byteorder::ReadBytesExt;
+use bytes::{BufMut, Bytes, BytesMut};
 
 // ASDUSizeMax asdu max size
 pub(crate) const ASDU_SIZE_MAX: usize = 249;
@@ -29,7 +28,10 @@ const INVALID_COMMON_ADDR: u16 = 0;
 #[allow(dead_code)]
 const GLOBAL_COMMON_ADDR: u16 = 65535;
 
-pub const IDENTIFIER_SIZE: usize = 5;
+pub const IDENTIFIER_SIZE: usize = 6;
+
+pub type OriginAddr = u8;
+pub type CommonAddr = u16;
 
 #[derive(Debug)]
 pub struct Asdu {
@@ -41,8 +43,9 @@ pub struct Asdu {
 pub struct Identifier {
     pub type_id: TypeID,
     pub variable_struct: VariableStruct,
-    pub cause: CauseOfTransmission,
-    pub common_addr: u16,
+    pub cot: CauseOfTransmission,
+    pub orig_addr: OriginAddr,
+    pub common_addr: CommonAddr,
 }
 
 // #[derive(Debug)]
@@ -122,7 +125,7 @@ bit_struct! {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum TypeID {
     M_SP_NA_1 = 1,
     M_SP_TA_1 = 2,
@@ -306,11 +309,14 @@ impl TryFrom<u8> for TypeID {
 
 // 信息对象地址 (IEC104)
 bit_struct! {
-    pub struct ObjectAddr(u24) {
+    pub struct InfoObjAddr(u24) {
         res: u8,       // 未使用, 置0
         addr: u16,     // 有效取值 [1, 65534]
     }
 }
+
+// InfoObjAddrIrrelevant Zero means that the information object address is irrelevant.
+pub const INFO_OBJ_ADDR_IRRELEVANT: u16 = 0;
 
 impl TryFrom<Bytes> for Asdu {
     type Error = anyhow::Error;
@@ -319,14 +325,16 @@ impl TryFrom<Bytes> for Asdu {
         let mut rdr = Cursor::new(&bytes);
         let type_id = TypeID::try_from(rdr.read_u8()?)?;
         let variable_struct = VariableStruct::try_from(rdr.read_u8()?).unwrap();
-        let cause = CauseOfTransmission::try_from(rdr.read_u8()?).unwrap();
-        let common_addr = rdr.read_u16::<byteorder::BigEndian>()?;
+        let cot = CauseOfTransmission::try_from(rdr.read_u8()?).unwrap();
+        let orig_addr = rdr.read_u8()?;
+        let common_addr = rdr.read_u16::<byteorder::LittleEndian>()?;
         let mut bytes = bytes;
         Ok(Asdu {
             identifier: Identifier {
                 type_id,
                 variable_struct,
-                cause,
+                cot,
+                orig_addr,
                 common_addr,
             },
             raw: bytes.split_off(IDENTIFIER_SIZE),
@@ -341,8 +349,9 @@ impl TryInto<Bytes> for Asdu {
         let mut buf = BytesMut::with_capacity(ASDU_SIZE_MAX);
         buf.put_u8(self.identifier.type_id as u8);
         buf.put_u8(self.identifier.variable_struct.raw());
-        buf.put_u8(self.identifier.cause.raw());
-        buf.put_u16(self.identifier.common_addr);
+        buf.put_u8(self.identifier.cot.raw());
+        buf.put_u8(self.identifier.orig_addr);
+        buf.put_u16_le(self.identifier.common_addr);
         buf.extend(self.raw);
 
         Ok(buf.freeze())
@@ -350,69 +359,7 @@ impl TryInto<Bytes> for Asdu {
 }
 
 /// 通过raw解析成Obj
-impl Asdu {
-    // CP56Time2a , CP24Time2a, CP16Time2a
-    // |         Milliseconds(D7--D0)        | Milliseconds = 0-59999
-    // |         Milliseconds(D15--D8)       |
-    // | IV(D7)   RES1(D6)  Minutes(D5--D0)  | Minutes = 1-59, IV = invalid,0 = valid, 1 = invalid
-    // | SU(D7)   RES2(D6-D5)  Hours(D4--D0) | Hours = 0-23, SU = summer Time,0 = standard time, 1 = summer time,
-    // | DayOfWeek(D7--D5) DayOfMonth(D4--D0)| DayOfMonth = 1-31  DayOfWeek = 1-7
-    // | RES3(D7--D4)        Months(D3--D0)  | Months = 1-12
-    // | RES4(D7)            Year(D6--D0)    | Year = 0-99
-
-    // decode info object byte to CP56Time2a
-    pub fn decode_cp56time2a(rdr: &mut Cursor<&Bytes>) -> Result<Option<DateTime<Utc>>> {
-        if rdr.remaining() < 7 {
-            return Ok(None);
-        }
-        let millisecond = rdr.read_u16::<LittleEndian>()?;
-        let msec = millisecond % 1000;
-        let sec = (millisecond / 1000) as u32;
-        let min = rdr.read_u8()?;
-        let invalid = min & 0x80;
-        let min = (min & 0x3f) as u32;
-        let hour = (rdr.read_u8()? & 0x1f) as u32;
-        let day = (rdr.read_u8()? & 0x1f) as u32;
-        let month = (rdr.read_u8()? & 0x0f) as u32;
-        let year = 2000 + (rdr.read_u8()? & 0x7f) as i32;
-
-        if invalid != 0 {
-            Ok(None)
-        } else {
-            Ok(Some(
-                Utc.with_ymd_and_hms(year, month, day, hour, min, sec)
-                    .unwrap(),
-            ))
-        }
-    }
-
-    // Decodecode info object byte to CP24Time2a
-    pub fn decode_cp24time2a(rdr: &mut Cursor<&Bytes>) -> Result<Option<DateTime<Utc>>> {
-        if rdr.remaining() < 3 {
-            return Ok(None);
-        }
-        let millisecond = rdr.read_u16::<LittleEndian>()?;
-        let msec = millisecond % 1000;
-        let sec = (millisecond / 1000) as u32;
-        let min = rdr.read_u8()?;
-        let invalid = min & 0x80;
-        let min = (min & 0x3f) as u32;
-
-        let now_utc = Utc::now();
-        let hour = now_utc.hour();
-        let day = now_utc.day();
-        let month = now_utc.month();
-        let year = now_utc.year();
-        if invalid != 0 {
-            Ok(None)
-        } else {
-            Ok(Some(
-                Utc.with_ymd_and_hms(year, month, day, hour, min, sec)
-                    .unwrap(),
-            ))
-        }
-    }
-}
+impl Asdu {}
 
 #[cfg(test)]
 mod tests {
@@ -421,16 +368,14 @@ mod tests {
     #[test]
     fn decode_and_encode_asdu() -> Result<()> {
         let bytes =
-            Bytes::from_static(&[0x01, 0x01, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03]);
+            Bytes::from_static(&[0x01, 0x01, 0x06, 0x00, 0x80, 0x00, 0x00, 0x01, 0x02, 0x03]);
         let mut asdu: Asdu = bytes.clone().try_into()?;
         assert!(asdu.identifier.type_id == TypeID::M_SP_NA_1);
         assert_eq!(asdu.identifier.variable_struct.number().get().value(), 0x01);
-        assert_eq!(asdu.identifier.cause.cause().get(), Cause::Activation);
-        assert_eq!(asdu.identifier.common_addr, 0x0080);
-        assert_eq!(
-            asdu.raw,
-            Bytes::from_static(&[0x60, 0x00, 0x01, 0x02, 0x03])
-        );
+        assert_eq!(asdu.identifier.cot.cause().get(), Cause::Activation);
+        assert_eq!(asdu.identifier.orig_addr, 0x00);
+        assert_eq!(asdu.identifier.common_addr, 0x80);
+        assert_eq!(asdu.raw, Bytes::from_static(&[0x00, 0x01, 0x02, 0x03]));
 
         let raw: Bytes = asdu.try_into().unwrap();
         assert_eq!(bytes, raw);

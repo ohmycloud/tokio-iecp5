@@ -4,6 +4,7 @@ pub mod cproc;
 pub mod csys;
 pub mod mproc;
 pub mod msys;
+pub mod time;
 
 use self::{apci::Apci, asdu::Asdu};
 

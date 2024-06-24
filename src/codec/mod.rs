@@ -152,7 +152,8 @@ mod tests {
                 identifier: Identifier {
                     type_id: TypeID::M_SP_NA_1,
                     variable_struct: VariableStruct::try_from(0x02).unwrap(),
-                    cause: CauseOfTransmission::try_from(0x06).unwrap(),
+                    cot: CauseOfTransmission::try_from(0x06).unwrap(),
+                    orig_addr: 0,
                     common_addr: 0,
                 },
                 raw: Bytes::from_static(&[0x01, 0x00, 0x00, 0x11, 0x02, 0x00, 0x00, 0x10]),
@@ -168,6 +169,7 @@ mod tests {
             0x01,
             0x02,
             0x06,
+            0x00,
             0x00,
             0x00,
             0x01,
