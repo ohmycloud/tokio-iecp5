@@ -7,7 +7,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
 
-use crate::{error::Error, frame::asdu::TypeID, interface::Connect};
+use crate::{error::Error, frame::asdu::TypeID};
 
 use super::{
     asdu::{Asdu, Cause, CauseOfTransmission, CommonAddr, Identifier, InfoObjAddr, VariableStruct},
@@ -117,13 +117,12 @@ bit_struct! {
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn single_cmd(
-    c: &impl Connect,
+pub fn single_cmd(
     type_id: TypeID,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     cmd: SingleCommandInfo,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
 
@@ -149,7 +148,7 @@ pub async fn single_cmd(
         _ => return Err(Error::ErrTypeIDNotMatch(type_id)),
     }
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -158,9 +157,7 @@ pub async fn single_cmd(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // DoubleCmd sends a type identification [C_DC_NA_1] or [C_DC_TA_1]. 双命令, 只有单个信息对象(SQ = 0)
@@ -178,13 +175,12 @@ pub async fn single_cmd(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn double_cmd(
-    c: &impl Connect,
+pub fn double_cmd(
     type_id: TypeID,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     cmd: DoubleCommandInfo,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
 
@@ -210,7 +206,7 @@ pub async fn double_cmd(
         _ => return Err(Error::ErrTypeIDNotMatch(type_id)),
     }
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -219,9 +215,7 @@ pub async fn double_cmd(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // StepCmd sends a type [C_RC_NA_1] or [C_RC_TA_1]. 步调节命令, 只有单个信息对象(SQ = 0)
@@ -239,7 +233,7 @@ pub async fn double_cmd(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-// pub async fn step_cmd(
+// pub fn step_cmd(
 //     c: &impl Connect,
 //     type_id: TypeID,
 //     cot: CauseOfTransmission,
@@ -300,13 +294,12 @@ pub async fn double_cmd(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn set_point_cmd_normal(
-    c: &impl Connect,
+pub fn set_point_cmd_normal(
     type_id: TypeID,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     cmd: SetpointCommandNormalInfo,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
 
@@ -333,7 +326,7 @@ pub async fn set_point_cmd_normal(
         _ => return Err(Error::ErrTypeIDNotMatch(type_id)),
     }
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -342,9 +335,7 @@ pub async fn set_point_cmd_normal(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // SetpointCmdScaled sends a type [C_SE_NB_1] or [C_SE_TB_1]. 设定命令,标度化值,只有单个信息对象(SQ = 0)
@@ -362,13 +353,12 @@ pub async fn set_point_cmd_normal(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn set_point_cmd_scaled(
-    c: &impl Connect,
+pub fn set_point_cmd_scaled(
     type_id: TypeID,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     cmd: SetpointCommandScaledInfo,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
 
@@ -395,7 +385,7 @@ pub async fn set_point_cmd_scaled(
         _ => return Err(Error::ErrTypeIDNotMatch(type_id)),
     }
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -404,9 +394,7 @@ pub async fn set_point_cmd_scaled(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // SetpointCmdFloat sends a type [C_SE_NC_1] or [C_SE_TC_1].设定命令,短浮点数,只有单个信息对象(SQ = 0)
@@ -424,13 +412,12 @@ pub async fn set_point_cmd_scaled(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn set_point_cmd_float(
-    c: &impl Connect,
+pub fn set_point_cmd_float(
     type_id: TypeID,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     cmd: SetpointCommandFloatInfo,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
 
@@ -457,7 +444,7 @@ pub async fn set_point_cmd_float(
         _ => return Err(Error::ErrTypeIDNotMatch(type_id)),
     }
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -466,9 +453,7 @@ pub async fn set_point_cmd_float(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 impl Asdu {

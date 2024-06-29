@@ -5,7 +5,7 @@ use bit_struct::*;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
 
-use crate::{error::Error, interface::Connect};
+use crate::error::Error;
 
 use super::asdu::{
     Asdu, CauseOfTransmission, CommonAddr, Identifier, InfoObjAddr, TypeID, VariableStruct,
@@ -27,18 +27,17 @@ bit_struct! {
 // 监视方向：
 // <4> := 被初始化
 async fn end_of_initialization(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     ioa: InfoObjAddr,
     coi: ObjectCOI,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let variable_struct = VariableStruct::new(u1::new(0).unwrap(), u7::new(1).unwrap());
     let mut buf = vec![];
     buf.write_u24::<LittleEndian>(ioa.raw().value())?;
     buf.write_u8(coi.raw())?;
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id: TypeID::M_EI_NA_1,
             variable_struct,
@@ -47,9 +46,7 @@ async fn end_of_initialization(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 impl Asdu {

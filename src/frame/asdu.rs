@@ -33,13 +33,13 @@ pub const IDENTIFIER_SIZE: usize = 6;
 pub type OriginAddr = u8;
 pub type CommonAddr = u16;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Asdu {
     pub identifier: Identifier,
     pub raw: Bytes,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Identifier {
     pub type_id: TypeID,
     pub variable_struct: VariableStruct,
@@ -126,7 +126,7 @@ bit_struct! {
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) enum TypeID {
+pub enum TypeID {
     M_SP_NA_1 = 1,
     M_SP_TA_1 = 2,
     M_DP_NA_1 = 3,

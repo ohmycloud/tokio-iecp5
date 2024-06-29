@@ -1,4 +1,9 @@
-use super::asdu::ASDU_SIZE_MAX;
+use crate::asdu::IDENTIFIER_SIZE;
+
+use super::{
+    asdu::{Asdu, ASDU_SIZE_MAX},
+    Apdu,
+};
 
 pub const START_FRAME: u8 = 0x68; // 启动字符
 
@@ -8,7 +13,7 @@ pub const START_FRAME: u8 = 0x68; // 启动字符
 //                       |          APDU field size(253)           |
 // bytes|    1  |    1   |        4           |                    |
 pub const APCI_FIELD_SIZE: usize = 6;
-pub const APCICTL_FIELD_SIZE: usize = 6;
+pub const APCICTL_FIELD_SIZE: usize = 4;
 pub const APDU_SIZE_MAX: usize = 255;
 pub const APDU_FIELD_SIZE_MAX: usize = APCICTL_FIELD_SIZE + ASDU_SIZE_MAX;
 
@@ -72,3 +77,48 @@ impl From<Apci> for ApciKind {
         })
     }
 }
+
+pub fn new_iframe(asdu: Asdu, send_sn: u16, rcv_sn: u16) -> Apdu {
+    let apci = Apci {
+        start: START_FRAME,
+        apdu_length: APCICTL_FIELD_SIZE as u8 + IDENTIFIER_SIZE as u8 + asdu.raw.len() as u8,
+        ctrl1: (send_sn << 1) as u8,
+        ctrl2: (send_sn >> 7) as u8,
+        ctrl3: (rcv_sn << 1) as u8,
+        ctrl4: (rcv_sn >> 7) as u8,
+    };
+    Apdu {
+        apci,
+        asdu: Some(asdu),
+    }
+}
+
+pub fn new_sframe(rcv_sn: u16) -> Apdu {
+    Apdu {
+        apci: Apci {
+            start: START_FRAME,
+            apdu_length: APCICTL_FIELD_SIZE as u8,
+            ctrl1: 0x01,
+            ctrl2: 0x00,
+            ctrl3: (rcv_sn << 1) as u8,
+            ctrl4: (rcv_sn >> 7) as u8,
+        },
+        asdu: None,
+    }
+}
+
+pub fn new_uframe(function: u8) -> Apdu {
+    Apdu {
+        apci: Apci {
+            start: START_FRAME,
+            apdu_length: APCICTL_FIELD_SIZE as u8,
+            ctrl1: function | 0x03,
+            ctrl2: 0x00,
+            ctrl3: 0x00,
+            ctrl4: 0x00,
+        },
+        asdu: None,
+    }
+}
+
+pub fn update_ack_no_out(ack_no: u16) {}

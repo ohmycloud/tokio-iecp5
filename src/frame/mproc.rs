@@ -6,7 +6,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
 
-use crate::{error::Error, interface::Connect};
+use crate::error::Error;
 
 use super::{
     asdu::{
@@ -127,29 +127,18 @@ pub struct ObjectBCR {
     pub value: i32,
 }
 
-//  TODO: checkValid check common parameter of request is valid
-fn check_vaild(
-    _: &impl Connect,
-    type_id: TypeID,
-    is_sequence: bool,
-    infos_len: usize,
-) -> Result<(), Error> {
-    Ok(())
-}
-
 // single sends a type identification [M_SP_NA_1], [M_SP_TA_1] or [M_SP_TB_1].单点信息
 // [M_SP_NA_1] See companion standard 101,subclass 7.3.1.1
 // [M_SP_TA_1] See companion standard 101,subclass 7.3.1.2
 // [M_SP_TB_1] See companion standard 101,subclass 7.3.1.22
-async fn single_inner(
-    c: &impl Connect,
+fn single_inner(
     type_id: TypeID,
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<SinglePointInfo>,
-) -> Result<(), Error> {
-    check_vaild(c, type_id, is_sequence, infos.len())?;
+) -> Result<Asdu, Error> {
+    // TODO: check infos len
 
     let variable_struct = VariableStruct::new(
         u1::new(is_sequence as u8).unwrap(),
@@ -185,7 +174,7 @@ async fn single_inner(
         }
     }
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -194,9 +183,7 @@ async fn single_inner(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // Single sends a type identification [M_SP_NA_1].不带时标单点信息
@@ -212,13 +199,12 @@ async fn single_inner(
 // <21> := 响应第1组召唤
 // 至
 // <36> := 响应第16组召唤
-pub async fn single(
-    c: &impl Connect,
+pub fn single(
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<SinglePointInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Background
@@ -231,7 +217,7 @@ pub async fn single(
         return Err(Error::ErrCmdCause(cot));
     }
 
-    single_inner(c, TypeID::M_SP_NA_1, is_sequence, cot, ca, infos).await
+    single_inner(TypeID::M_SP_NA_1, is_sequence, cot, ca, infos)
 }
 
 // SingleCP24Time2a sends a type identification [M_SP_TA_1],带时标CP24Time2a的单点信息，只有(SQ = 0)单个信息元素集合
@@ -242,12 +228,11 @@ pub async fn single(
 // <5> := 被请求
 // <11> := 远方命令引起的返送信息
 // <12> := 当地命令引起的返送信息
-pub async fn single_cp24time2a(
-    c: &impl Connect,
+pub fn single_cp24time2a(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<SinglePointInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous
@@ -257,7 +242,7 @@ pub async fn single_cp24time2a(
     {
         return Err(Error::ErrCmdCause(cot));
     }
-    single_inner(c, TypeID::M_SP_TA_1, false, cot, ca, infos).await
+    single_inner(TypeID::M_SP_TA_1, false, cot, ca, infos)
 }
 
 // SingleCP56Time2a sends a type identification [M_SP_TB_1].带时标CP56Time2a的单点信息,只有(SQ = 0)单个信息元素集合
@@ -268,12 +253,11 @@ pub async fn single_cp24time2a(
 // <5> := 被请求
 // <11> := 远方命令引起的返送信息
 // <12> := 当地命令引起的返送信息
-pub async fn single_cp56time2a(
-    c: &impl Connect,
+pub fn single_cp56time2a(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<SinglePointInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous
@@ -283,22 +267,21 @@ pub async fn single_cp56time2a(
     {
         return Err(Error::ErrCmdCause(cot));
     }
-    single_inner(c, TypeID::M_SP_TB_1, false, cot, ca, infos).await
+    single_inner(TypeID::M_SP_TB_1, false, cot, ca, infos)
 }
 
 // double sends a type identification [M_DP_NA_1], [M_DP_TA_1] or [M_DP_TB_1].双点信息
 // [M_DP_NA_1] See companion standard 101,subclass 7.3.1.3
 // [M_DP_TA_1] See companion standard 101,subclass 7.3.1.4
 // [M_DP_TB_1] See companion standard 101,subclass 7.3.1.23
-async fn double_inner(
-    c: &impl Connect,
+fn double_inner(
     type_id: TypeID,
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<DoublePointInfo>,
-) -> Result<(), Error> {
-    check_vaild(c, type_id, is_sequence, infos.len())?;
+) -> Result<Asdu, Error> {
+    // TODO: check infos len
 
     let variable_struct = VariableStruct::new(
         u1::new(is_sequence as u8).unwrap(),
@@ -335,7 +318,7 @@ async fn double_inner(
         }
     }
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -344,9 +327,7 @@ async fn double_inner(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // Double sends a type identification [M_DP_NA_1].双点信息
@@ -363,12 +344,11 @@ async fn double_inner(
 // 至
 // <36> := 响应第16组召唤
 pub async fn double(
-    c: &impl Connect,
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<DoublePointInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Background
@@ -380,7 +360,7 @@ pub async fn double(
     {
         return Err(Error::ErrCmdCause(cot));
     }
-    double_inner(c, TypeID::M_DP_NA_1, is_sequence, cot, ca, infos).await
+    double_inner(TypeID::M_DP_NA_1, is_sequence, cot, ca, infos)
 }
 
 // DoubleCP24Time2a sends a type identification [M_DP_TA_1] .带CP24Time2a双点信息,只有(SQ = 0)单个信息元素集合
@@ -391,13 +371,12 @@ pub async fn double(
 // <5> := 被请求
 // <11> := 远方命令引起的返送信息
 // <12> := 当地命令引起的返送信息
-pub async fn double_cp24time2a(
-    c: &impl Connect,
+pub fn double_cp24time2a(
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<DoublePointInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous
@@ -408,7 +387,7 @@ pub async fn double_cp24time2a(
         return Err(Error::ErrCmdCause(cot));
     }
 
-    double_inner(c, TypeID::M_DP_TA_1, is_sequence, cot, ca, infos).await
+    double_inner(TypeID::M_DP_TA_1, is_sequence, cot, ca, infos)
 }
 
 // DoubleCP56Time2a sends a type identification [M_DP_TB_1].带CP56Time2a的双点信息,只有(SQ = 0)单个信息元素集合
@@ -419,13 +398,12 @@ pub async fn double_cp24time2a(
 // <5> := 被请求
 // <11> := 远方命令引起的返送信息
 // <12> := 当地命令引起的返送信息
-pub async fn double_cp56time2a(
-    c: &impl Connect,
+pub fn double_cp56time2a(
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<DoublePointInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous
@@ -436,7 +414,7 @@ pub async fn double_cp56time2a(
         return Err(Error::ErrCmdCause(cot));
     }
 
-    double_inner(c, TypeID::M_DP_TB_1, is_sequence, cot, ca, infos).await
+    double_inner(TypeID::M_DP_TB_1, is_sequence, cot, ca, infos)
 }
 
 // TODO:
@@ -444,22 +422,21 @@ pub async fn double_cp56time2a(
 // [M_ST_NA_1] See companion standard 101, subclass 7.3.1.5
 // [M_ST_TA_1] See companion standard 101, subclass 7.3.1.6
 // [M_ST_TB_1] See companion standard 101, subclass 7.3.1.24
-// async fn setp_inner(c: &impl Connect, type_id: TypeID, is_sequence: bool, cot: CauseOfTransmission, ca: CommonAddr, infos: Vec<>);
+// async fn setp_inner(type_id: TypeID, is_sequence: bool, cot: CauseOfTransmission, ca: CommonAddr, infos: Vec<>);
 
 // measuredValueNormal sends a type identification [M_ME_NA_1], [M_ME_TA_1],[ M_ME_TD_1] or [M_ME_ND_1].测量值,规一化值
 // [M_ME_NA_1] See companion standard 101, subclass 7.3.1.9
 // [M_ME_TA_1] See companion standard 101, subclass 7.3.1.10
 // [M_ME_TD_1] See companion standard 101, subclass 7.3.1.26
 // [M_ME_ND_1] See companion standard 101, subclass 7.3.1.21， The quality descriptor must default to asdu.GOOD
-async fn measured_value_normal_inner(
-    c: &impl Connect,
+fn measured_value_normal_inner(
     type_id: TypeID,
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueNormalInfo>,
-) -> Result<(), Error> {
-    check_vaild(c, type_id, is_sequence, infos.len())?;
+) -> Result<Asdu, Error> {
+    // TODO: check infos len
     let variable_struct = VariableStruct::new(
         u1::new(is_sequence as u8).unwrap(),
         u7::new(infos.len() as u8).unwrap(),
@@ -510,7 +487,7 @@ async fn measured_value_normal_inner(
             _ => return Err(Error::ErrTypeIDNotMatch(type_id)),
         }
     }
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -519,8 +496,7 @@ async fn measured_value_normal_inner(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-    c.send(asdu).await
+    })
 }
 
 // MeasuredValueNormal sends a type identification [M_ME_NA_1].测量值,规一化值
@@ -535,13 +511,12 @@ async fn measured_value_normal_inner(
 // <21> := 响应第1组召唤
 // 至
 // <36> := 响应第16组召唤
-pub async fn measured_value_normal(
-    c: &impl Connect,
+pub fn measured_value_normal(
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueNormalInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Periodic
@@ -553,7 +528,7 @@ pub async fn measured_value_normal(
         return Err(Error::ErrCmdCause(cot));
     }
 
-    measured_value_normal_inner(c, TypeID::M_ME_NA_1, is_sequence, cot, ca, infos).await
+    measured_value_normal_inner(TypeID::M_ME_NA_1, is_sequence, cot, ca, infos)
 }
 
 // MeasuredValueNormalCP24Time2a sends a type identification [M_ME_TA_1].带时标CP24Time2a的测量值,规一化值,只有(SQ = 0)单个信息元素集合
@@ -562,19 +537,18 @@ pub async fn measured_value_normal(
 // 监视方向：
 // <3> := 突发(自发)
 // <5> := 被请求
-pub async fn measured_value_normal_cp24time2a(
-    c: &impl Connect,
+pub fn measured_value_normal_cp24time2a(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueNormalInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous || cause == Cause::Request) {
         return Err(Error::ErrCmdCause(cot));
     }
 
-    measured_value_normal_inner(c, TypeID::M_ME_TA_1, false, cot, ca, infos).await
+    measured_value_normal_inner(TypeID::M_ME_TA_1, false, cot, ca, infos)
 }
 
 // MeasuredValueNormalCP56Time2a sends a type identification [ M_ME_TD_1] 带时标CP57Time2a的测量值,规一化值,只有(SQ = 0)单个信息元素集合
@@ -583,19 +557,18 @@ pub async fn measured_value_normal_cp24time2a(
 // 监视方向：
 // <3> := 突发(自发)
 // <5> := 被请求
-pub async fn measured_value_normal_cp56time2a(
-    c: &impl Connect,
+pub fn measured_value_normal_cp56time2a(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueNormalInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous || cause == Cause::Request) {
         return Err(Error::ErrCmdCause(cot));
     }
 
-    measured_value_normal_inner(c, TypeID::M_ME_TD_1, false, cot, ca, infos).await
+    measured_value_normal_inner(TypeID::M_ME_TD_1, false, cot, ca, infos)
 }
 
 // MeasuredValueNormalNoQuality sends a type identification [M_ME_ND_1].不带品质的测量值,规一化值
@@ -611,12 +584,11 @@ pub async fn measured_value_normal_cp56time2a(
 // <21> := 响应第1组召唤
 // 至
 // <36> := 响应第16组召唤
-pub async fn measured_value_normal_noquality(
-    c: &impl Connect,
+pub fn measured_value_normal_noquality(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueNormalInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Periodic
@@ -628,22 +600,21 @@ pub async fn measured_value_normal_noquality(
         return Err(Error::ErrCmdCause(cot));
     }
 
-    measured_value_normal_inner(c, TypeID::M_ME_ND_1, false, cot, ca, infos).await
+    measured_value_normal_inner(TypeID::M_ME_ND_1, false, cot, ca, infos)
 }
 
 // measuredValueScaled sends a type identification [M_ME_NB_1], [M_ME_TB_1] or [M_ME_TE_1].测量值,标度化值
 // [M_ME_NB_1] See companion standard 101, subclass 7.3.1.11
 // [M_ME_TB_1] See companion standard 101, subclass 7.3.1.12
 // [M_ME_TE_1] See companion standard 101, subclass 7.3.1.27
-async fn measured_value_scaled_inner(
-    c: &impl Connect,
+fn measured_value_scaled_inner(
     type_id: TypeID,
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueScaledInfo>,
-) -> Result<(), Error> {
-    check_vaild(c, type_id, is_sequence, infos.len())?;
+) -> Result<Asdu, Error> {
+    // TODO: check infos len
     let variable_struct = VariableStruct::new(
         u1::new(is_sequence as u8).unwrap(),
         u7::new(infos.len() as u8).unwrap(),
@@ -676,7 +647,7 @@ async fn measured_value_scaled_inner(
             _ => return Err(Error::ErrTypeIDNotMatch(type_id)),
         }
     }
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -685,8 +656,7 @@ async fn measured_value_scaled_inner(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-    c.send(asdu).await
+    })
 }
 
 // MeasuredValueScaled sends a type identification [M_ME_NB_1].测量值,标度化值
@@ -701,12 +671,11 @@ async fn measured_value_scaled_inner(
 // <21> := 响应第1组召唤
 // 至
 // <36> := 响应第16组召唤
-pub async fn measured_value_scaled(
-    c: &impl Connect,
+pub fn measured_value_scaled(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueScaledInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Periodic
@@ -717,7 +686,7 @@ pub async fn measured_value_scaled(
     {
         return Err(Error::ErrCmdCause(cot));
     }
-    measured_value_scaled_inner(c, TypeID::M_ME_NB_1, false, cot, ca, infos).await
+    measured_value_scaled_inner(TypeID::M_ME_NB_1, false, cot, ca, infos)
 }
 
 // MeasuredValueScaledCP24Time2a sends a type identification [M_ME_TB_1].带时标CP24Time2a的测量值,标度化值,只有(SQ = 0)单个信息元素集合
@@ -726,18 +695,17 @@ pub async fn measured_value_scaled(
 // 监视方向：
 // <3> := 突发(自发)
 // <5> := 被请求
-pub async fn measured_value_scaled_cp24time2a(
-    c: &impl Connect,
+pub fn measured_value_scaled_cp24time2a(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueScaledInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous || cause == Cause::Request) {
         return Err(Error::ErrCmdCause(cot));
     }
-    measured_value_scaled_inner(c, TypeID::M_ME_TB_1, false, cot, ca, infos).await
+    measured_value_scaled_inner(TypeID::M_ME_TB_1, false, cot, ca, infos)
 }
 
 // MeasuredValueScaledCP56Time2a sends a type identification [M_ME_TE_1].带时标CP56Time2a的测量值,标度化值,只有(SQ = 0)单个信息元素集合
@@ -746,33 +714,31 @@ pub async fn measured_value_scaled_cp24time2a(
 // 监视方向：
 // <3> := 突发(自发)
 // <5> := 被请求
-pub async fn measured_value_scaled_cp56time2a(
-    c: &impl Connect,
+pub fn measured_value_scaled_cp56time2a(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueScaledInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous || cause == Cause::Request) {
         return Err(Error::ErrCmdCause(cot));
     }
-    measured_value_scaled_inner(c, TypeID::M_ME_TE_1, false, cot, ca, infos).await
+    measured_value_scaled_inner(TypeID::M_ME_TE_1, false, cot, ca, infos)
 }
 
 // measuredValueFloat sends a type identification [M_ME_NC_1], [M_ME_TC_1] or [M_ME_TF_1].测量值,短浮点数
 // [M_ME_NC_1] See companion standard 101, subclass 7.3.1.13
 // [M_ME_TC_1] See companion standard 101, subclass 7.3.1.14
 // [M_ME_TF_1] See companion standard 101, subclass 7.3.1.28
-async fn measured_value_float_inner(
-    c: &impl Connect,
+fn measured_value_float_inner(
     type_id: TypeID,
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueFloatInfo>,
-) -> Result<(), Error> {
-    check_vaild(c, type_id, is_sequence, infos.len())?;
+) -> Result<Asdu, Error> {
+    // TODO: check infos len
     let variable_struct = VariableStruct::new(
         u1::new(is_sequence as u8).unwrap(),
         u7::new(infos.len() as u8).unwrap(),
@@ -805,7 +771,7 @@ async fn measured_value_float_inner(
             _ => return Err(Error::ErrTypeIDNotMatch(type_id)),
         }
     }
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -814,8 +780,7 @@ async fn measured_value_float_inner(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-    c.send(asdu).await
+    })
 }
 
 // MeasuredValueFloat sends a type identification [M_ME_TF_1].测量值,短浮点数
@@ -831,12 +796,11 @@ async fn measured_value_float_inner(
 // 至
 // <36> := 响应第16组召唤
 pub async fn measured_value_float(
-    c: &impl Connect,
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueFloatInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Periodic
@@ -848,7 +812,7 @@ pub async fn measured_value_float(
         return Err(Error::ErrCmdCause(cot));
     }
 
-    measured_value_float_inner(c, TypeID::M_ME_NC_1, is_sequence, cot, ca, infos).await
+    measured_value_float_inner(TypeID::M_ME_NC_1, is_sequence, cot, ca, infos)
 }
 
 // MeasuredValueFloatCP24Time2a sends a type identification [M_ME_TC_1].带时标CP24Time2a的测量值,短浮点数,只有(SQ = 0)单个信息元素集合
@@ -858,18 +822,17 @@ pub async fn measured_value_float(
 // <3> := 突发(自发)
 // <5> := 被请求
 pub async fn measured_value_float_cp24time2a(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueFloatInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous || cause == Cause::Request) {
         return Err(Error::ErrCmdCause(cot));
     }
 
-    measured_value_float_inner(c, TypeID::M_ME_TC_1, false, cot, ca, infos).await
+    measured_value_float_inner(TypeID::M_ME_TC_1, false, cot, ca, infos)
 }
 
 // MeasuredValueFloatCP56Time2a sends a type identification [M_ME_TF_1].带时标CP56Time2a的测量值,短浮点数,只有(SQ = 0)单个信息元素集合
@@ -879,32 +842,30 @@ pub async fn measured_value_float_cp24time2a(
 // <3> := 突发(自发)
 // <5> := 被请求
 pub async fn measured_value_float_cp56time2a(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<MeasuredValueFloatInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous || cause == Cause::Request) {
         return Err(Error::ErrCmdCause(cot));
     }
 
-    measured_value_float_inner(c, TypeID::M_ME_TF_1, false, cot, ca, infos).await
+    measured_value_float_inner(TypeID::M_ME_TF_1, false, cot, ca, infos)
 }
 // integratedTotals sends a type identification [M_IT_NA_1], [M_IT_TA_1] or [M_IT_TB_1]. 累计量
 // [M_IT_NA_1] See companion standard 101, subclass 7.3.1.15
 // [M_IT_TA_1] See companion standard 101, subclass 7.3.1.16
 // [M_IT_TB_1] See companion standard 101, subclass 7.3.1.29
-async fn integrated_totals_inner(
-    c: &impl Connect,
+fn integrated_totals_inner(
     type_id: TypeID,
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<BinaryCounterReadingInfo>,
-) -> Result<(), Error> {
-    check_vaild(c, type_id, is_sequence, infos.len())?;
+) -> Result<Asdu, Error> {
+    // TODO: check infos len
     let variable_struct = VariableStruct::new(
         u1::new(is_sequence as u8).unwrap(),
         u7::new(infos.len() as u8).unwrap(),
@@ -947,7 +908,7 @@ async fn integrated_totals_inner(
             _ => return Err(Error::ErrTypeIDNotMatch(type_id)),
         }
     }
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id,
             variable_struct,
@@ -956,8 +917,7 @@ async fn integrated_totals_inner(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-    c.send(asdu).await
+    })
 }
 
 // IntegratedTotals sends a type identification [M_IT_NA_1]. 累计量
@@ -971,11 +931,10 @@ async fn integrated_totals_inner(
 // <40> := 响应第3组计数量召唤
 // <41> := 响应第4组计数量召唤
 pub async fn integrated_totals(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<BinaryCounterReadingInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous
@@ -984,7 +943,7 @@ pub async fn integrated_totals(
         return Err(Error::ErrCmdCause(cot));
     }
 
-    integrated_totals_inner(c, TypeID::M_IT_NA_1, false, cot, ca, infos).await
+    integrated_totals_inner(TypeID::M_IT_NA_1, false, cot, ca, infos)
 }
 
 // IntegratedTotalsCP24Time2a sends a type identification [M_IT_TA_1]. 带时标CP24Time2a的累计量,只有(SQ = 0)单个信息元素集合
@@ -998,11 +957,10 @@ pub async fn integrated_totals(
 // <40> := 响应第3组计数量召唤
 // <41> := 响应第4组计数量召唤
 pub async fn integrated_totals_cp24time2a(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<BinaryCounterReadingInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous
@@ -1011,7 +969,7 @@ pub async fn integrated_totals_cp24time2a(
         return Err(Error::ErrCmdCause(cot));
     }
 
-    integrated_totals_inner(c, TypeID::M_IT_TA_1, false, cot, ca, infos).await
+    integrated_totals_inner(TypeID::M_IT_TA_1, false, cot, ca, infos)
 }
 
 // IntegratedTotalsCP56Time2a sends a type identification [M_IT_TB_1]. 带时标CP56Time2a的累计量,只有(SQ = 0)单个信息元素集合
@@ -1025,11 +983,10 @@ pub async fn integrated_totals_cp24time2a(
 // <40> := 响应第3组计数量召唤
 // <41> := 响应第4组计数量召唤
 pub async fn integrated_totals_cp56time2a(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<BinaryCounterReadingInfo>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
     if !(cause == Cause::Spontaneous
@@ -1038,7 +995,7 @@ pub async fn integrated_totals_cp56time2a(
         return Err(Error::ErrCmdCause(cot));
     }
 
-    integrated_totals_inner(c, TypeID::M_IT_TB_1, false, cot, ca, infos).await
+    integrated_totals_inner(TypeID::M_IT_TB_1, false, cot, ca, infos)
 }
 
 impl Asdu {
@@ -1261,16 +1218,12 @@ impl Asdu {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
 
     use bytes::Bytes;
     use chrono::{Datelike, TimeZone, Timelike};
     use tokio_test::{assert_err, assert_ok};
 
-    use crate::{
-        frame::asdu::{CauseOfTransmission, Identifier, VariableStruct},
-        interface::TestConn,
-    };
+    use crate::frame::asdu::{CauseOfTransmission, Identifier, VariableStruct};
 
     use super::*;
 
@@ -1413,11 +1366,11 @@ mod tests {
     #[tokio::test]
     async fn test_single() -> Result<()> {
         struct Args {
-            c: TestConn,
             is_sequence: bool,
             cot: CauseOfTransmission,
             ca: CommonAddr,
             infos: Vec<SinglePointInfo>,
+            want_bytes: Bytes,
         }
 
         struct Test {
@@ -1430,36 +1383,17 @@ mod tests {
             Test {
                 name: "invalid cause".into(),
                 args: Args {
-                    c: TestConn::new(Bytes::new(), None),
                     is_sequence: false,
                     cot: CauseOfTransmission::new(false, false, Cause::Unused),
                     ca: 0x1234,
                     infos: vec![],
+                    want_bytes: Bytes::new(),
                 },
                 want_err: true,
             },
             Test {
                 name: "M_SP_NA_1 seq = false Number = 2".into(),
                 args: Args {
-                    c: TestConn::new(
-                        Bytes::from_static(&[
-                            TypeID::M_SP_NA_1 as u8,
-                            0x02,
-                            0x02,
-                            0x00,
-                            0x34,
-                            0x12,
-                            0x01,
-                            0x00,
-                            0x00,
-                            0x11,
-                            0x02,
-                            0x00,
-                            0x00,
-                            0x10,
-                        ]),
-                        Some(Duration::from_millis(50)),
-                    ),
                     is_sequence: false,
                     cot: CauseOfTransmission::new(false, false, Cause::Background),
                     ca: 0x1234,
@@ -1475,28 +1409,28 @@ mod tests {
                             None,
                         ),
                     ],
+                    want_bytes: Bytes::from_static(&[
+                        TypeID::M_SP_NA_1 as u8,
+                        0x02,
+                        0x02,
+                        0x00,
+                        0x34,
+                        0x12,
+                        0x01,
+                        0x00,
+                        0x00,
+                        0x11,
+                        0x02,
+                        0x00,
+                        0x00,
+                        0x10,
+                    ]),
                 },
                 want_err: false,
             },
             Test {
                 name: "M_SP_NA_1 seq = true Number = 2".into(),
                 args: Args {
-                    c: TestConn::new(
-                        Bytes::from_static(&[
-                            TypeID::M_SP_NA_1 as u8,
-                            0x82,
-                            0x02,
-                            0x00,
-                            0x34,
-                            0x12,
-                            0x01,
-                            0x00,
-                            0x00,
-                            0x11,
-                            0x10,
-                        ]),
-                        None,
-                    ),
                     is_sequence: true,
                     cot: CauseOfTransmission::new(false, false, Cause::Background),
                     ca: 0x1234,
@@ -1512,20 +1446,40 @@ mod tests {
                             None,
                         ),
                     ],
+                    want_bytes: Bytes::from_static(&[
+                        TypeID::M_SP_NA_1 as u8,
+                        0x82,
+                        0x02,
+                        0x00,
+                        0x34,
+                        0x12,
+                        0x01,
+                        0x00,
+                        0x00,
+                        0x11,
+                        0x10,
+                    ]),
                 },
                 want_err: false,
             },
         ];
 
         for t in tests {
-            let r = single(
-                &t.args.c,
-                t.args.is_sequence,
-                t.args.cot,
-                t.args.ca,
-                t.args.infos,
-            )
-            .await;
+            let r = single(t.args.is_sequence, t.args.cot, t.args.ca, t.args.infos)
+                .map(|asdu| {
+                    let raw: Bytes = asdu.try_into().unwrap();
+                    raw
+                })
+                .and_then(|raw| {
+                    let want_bytes = t.args.want_bytes;
+                    if raw != want_bytes {
+                        return Err(Error::ErrAnyHow(anyhow::anyhow!(
+                            "expected: {want_bytes:?}, result: {raw:?}"
+                        )));
+                    }
+                    Ok(())
+                });
+
             if r.is_err() != t.want_err {
                 if t.want_err {
                     assert_err!(r);

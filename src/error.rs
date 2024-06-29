@@ -13,6 +13,11 @@ pub enum Error {
     #[error("asdu: [cause of transmission: {0:?}] for command not standard requirement")]
     ErrCmdCause(CauseOfTransmission),
 
+    #[error("")]
+    ErrUseClosedConnection,
+    #[error("")]
+    ErrNotActive,
+
     #[error("anyhow error")]
     ErrAnyHow(#[from] anyhow::Error),
 }

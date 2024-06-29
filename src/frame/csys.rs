@@ -6,7 +6,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
 
-use crate::{error::Error, interface::Connect};
+use crate::error::Error;
 
 use super::{
     asdu::{
@@ -58,12 +58,11 @@ bit_struct! {
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn interrogation_cmd(
-    c: &impl Connect,
+pub fn interrogation_cmd(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     qoi: ObjectQOI,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
 
@@ -77,7 +76,7 @@ pub async fn interrogation_cmd(
     buf.write_u24::<LittleEndian>(InfoObjAddr::new(0, INFO_OBJ_ADDR_IRRELEVANT).raw().value())?;
     buf.write_u8(qoi.raw())?;
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id: TypeID::C_IC_NA_1,
             variable_struct,
@@ -86,9 +85,7 @@ pub async fn interrogation_cmd(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // CounterInterrogationCmd send Counter Interrogation command [C_CI_NA_1]，计数量召唤命令，只有单个信息对象(SQ = 0)
@@ -104,11 +101,10 @@ pub async fn interrogation_cmd(
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
 pub async fn counter_interrogation_cmd(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     qcc: ObjectQCC,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     cot.cause().set(Cause::Activation);
 
@@ -118,7 +114,7 @@ pub async fn counter_interrogation_cmd(
     buf.write_u24::<LittleEndian>(InfoObjAddr::new(0, INFO_OBJ_ADDR_IRRELEVANT).raw().value())?;
     buf.write_u8(qcc.raw())?;
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id: TypeID::C_CI_NA_1,
             variable_struct,
@@ -127,9 +123,7 @@ pub async fn counter_interrogation_cmd(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // ReadCmd send read command [C_RD_NA_1], 读命令, 只有单个信息对象(SQ = 0)
@@ -143,11 +137,10 @@ pub async fn counter_interrogation_cmd(
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
 pub async fn read_cmd(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     ioa: InfoObjAddr,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     cot.cause().set(Cause::Request);
 
@@ -156,7 +149,7 @@ pub async fn read_cmd(
     let mut buf = vec![];
     buf.write_u24::<LittleEndian>(ioa.raw().value())?;
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id: TypeID::C_RD_NA_1,
             variable_struct,
@@ -165,9 +158,7 @@ pub async fn read_cmd(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // ClockSynchronizationCmd send clock sync command [C_CS_NA_1],时钟同步命令, 只有单个信息对象(SQ = 0)
@@ -183,11 +174,10 @@ pub async fn read_cmd(
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
 pub async fn clock_synchronization_cmd(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     time: DateTime<Utc>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     cot.cause().set(Cause::Activation);
 
@@ -197,7 +187,7 @@ pub async fn clock_synchronization_cmd(
     buf.write_u24::<LittleEndian>(InfoObjAddr::new(0, INFO_OBJ_ADDR_IRRELEVANT).raw().value())?;
     buf.extend_from_slice(&cp56time2a(time));
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id: TypeID::C_CS_NA_1,
             variable_struct,
@@ -206,9 +196,7 @@ pub async fn clock_synchronization_cmd(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // TestCommand send test command [C_TS_NA_1]，测试命令, 只有单个信息对象(SQ = 0)
@@ -222,11 +210,7 @@ pub async fn clock_synchronization_cmd(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn test_command(
-    c: &impl Connect,
-    cot: CauseOfTransmission,
-    ca: CommonAddr,
-) -> Result<(), Error> {
+pub async fn test_command(cot: CauseOfTransmission, ca: CommonAddr) -> Result<Asdu, Error> {
     let mut cot = cot;
     cot.cause().set(Cause::Activation);
 
@@ -236,7 +220,7 @@ pub async fn test_command(
     buf.write_u24::<LittleEndian>(InfoObjAddr::new(0, INFO_OBJ_ADDR_IRRELEVANT).raw().value())?;
     buf.write_u16::<LittleEndian>(FBPTEST_WORD)?;
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id: TypeID::C_TS_NA_1,
             variable_struct,
@@ -245,9 +229,7 @@ pub async fn test_command(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // ResetProcessCmd send reset process command [C_RP_NA_1],复位进程命令, 只有单个信息对象(SQ = 0)
@@ -262,11 +244,10 @@ pub async fn test_command(
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
 pub async fn reset_process_cmd(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     qrp: QualifierOfResetProcessCmd,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     cot.cause().set(Cause::Activation);
 
@@ -276,7 +257,7 @@ pub async fn reset_process_cmd(
     buf.write_u24::<LittleEndian>(InfoObjAddr::new(0, INFO_OBJ_ADDR_IRRELEVANT).raw().value())?;
     buf.write_u8(qrp)?;
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id: TypeID::C_RP_NA_1,
             variable_struct,
@@ -285,9 +266,7 @@ pub async fn reset_process_cmd(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // DelayAcquireCommand send delay acquire command [C_CD_NA_1],延时获得命令, 只有单个信息对象(SQ = 0)
@@ -303,11 +282,10 @@ pub async fn reset_process_cmd(
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
 pub async fn delay_acquire_command(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     msec: u16,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     let cause = cot.cause().get();
 
@@ -321,7 +299,7 @@ pub async fn delay_acquire_command(
     buf.write_u24::<LittleEndian>(InfoObjAddr::new(0, INFO_OBJ_ADDR_IRRELEVANT).raw().value())?;
     buf.extend_from_slice(&cp16time2a_from_msec(msec));
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id: TypeID::C_CD_NA_1,
             variable_struct,
@@ -330,9 +308,7 @@ pub async fn delay_acquire_command(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 // TestCommandCP56Time2a send test command [C_TS_TA_1]，测试命令, 只有单个信息对象(SQ = 0)
@@ -346,11 +322,10 @@ pub async fn delay_acquire_command(
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
 pub async fn test_command_cp56time2a(
-    c: &impl Connect,
     cot: CauseOfTransmission,
     ca: CommonAddr,
     time: DateTime<Utc>,
-) -> Result<(), Error> {
+) -> Result<Asdu, Error> {
     let mut cot = cot;
     cot.cause().set(Cause::Activation);
     let variable_struct = VariableStruct::new(u1::new(0).unwrap(), u7::new(1).unwrap());
@@ -360,7 +335,7 @@ pub async fn test_command_cp56time2a(
     buf.write_u16::<LittleEndian>(FBPTEST_WORD)?;
     buf.extend_from_slice(&cp56time2a(time));
 
-    let asdu = Asdu {
+    Ok(Asdu {
         identifier: Identifier {
             type_id: TypeID::C_CD_NA_1,
             variable_struct,
@@ -369,9 +344,7 @@ pub async fn test_command_cp56time2a(
             common_addr: ca,
         },
         raw: Bytes::from(buf),
-    };
-
-    c.send(asdu).await
+    })
 }
 
 impl Asdu {
