@@ -1,6 +1,9 @@
 use thiserror::Error;
 
-use crate::frame::asdu::{CauseOfTransmission, TypeID};
+use crate::{
+    client::Request,
+    frame::asdu::{CauseOfTransmission, TypeID},
+};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -12,6 +15,9 @@ pub enum Error {
     ErrTypeIDNotMatch(TypeID),
     #[error("asdu: [cause of transmission: {0:?}] for command not standard requirement")]
     ErrCmdCause(CauseOfTransmission),
+
+    #[error("SendError {0}")]
+    ErrSendRequest(#[from] tokio::sync::mpsc::error::SendError<Request>),
 
     #[error("")]
     ErrUseClosedConnection,

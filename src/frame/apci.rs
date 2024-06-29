@@ -1,4 +1,6 @@
-use crate::asdu::IDENTIFIER_SIZE;
+use std::collections::VecDeque;
+
+use crate::{asdu::IDENTIFIER_SIZE, client::SeqPending};
 
 use super::{
     asdu::{Asdu, ASDU_SIZE_MAX},
@@ -121,4 +123,34 @@ pub fn new_uframe(function: u8) -> Apdu {
     }
 }
 
-pub fn update_ack_no_out(ack_no: u16) {}
+fn seq_no_count(next_ack_no: u16, mut next_send_no: u16) -> u16 {
+    if next_ack_no > next_send_no {
+        next_send_no += 32768;
+    }
+    next_send_no - next_ack_no
+}
+
+pub fn update_ack_no_out(
+    ack_no: u16,
+    ack_sendsn: &mut u16,
+    send_sn: &mut u16,
+    pending: &mut VecDeque<SeqPending>,
+) -> bool {
+    if ack_no == *ack_sendsn {
+        return true;
+    }
+
+    if seq_no_count(*ack_sendsn, *send_sn) < seq_no_count(ack_no, *send_sn) {
+        return false;
+    }
+
+    for i in 0..pending.len() {
+        if let Some(p) = pending.pop_front() {
+            if p.seq == ack_no - 1 {
+                break;
+            }
+        }
+    }
+    *ack_sendsn = ack_no;
+    true
+}

@@ -30,7 +30,7 @@ impl ClientHandler for ExampleHandler {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     env_logger::Builder::new()
-        .filter_level(log::LevelFilter::Info)
+        .filter_level(log::LevelFilter::Debug)
         .init();
 
     let op = ClientOption::default();
