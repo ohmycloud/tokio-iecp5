@@ -29,6 +29,17 @@ impl SinglePointInfo {
     pub fn new(ioa: InfoObjAddr, siq: ObjectSIQ, time: Option<DateTime<Utc>>) -> SinglePointInfo {
         SinglePointInfo { ioa, siq, time }
     }
+
+    pub fn new_single(addr: u16, v: bool) -> Self {
+        let ioa = InfoObjAddr::new(0, addr);
+        let siq = ObjectSIQ::new(false, false, false, false, u3!(0), v);
+
+        SinglePointInfo {
+            ioa,
+            siq,
+            time: None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -36,6 +47,20 @@ pub struct DoublePointInfo {
     pub ioa: InfoObjAddr,
     pub diq: ObjectDIQ,
     pub time: Option<DateTime<Utc>>,
+}
+
+impl DoublePointInfo {
+    pub fn new_double(addr: u16, v: u8) -> Self {
+        let v = v % 3;
+        let ioa = InfoObjAddr::new(0, addr);
+        let diq = ObjectDIQ::new(false, false, false, false, u2!(0), u2::new(v).unwrap());
+
+        DoublePointInfo {
+            ioa,
+            diq,
+            time: None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -349,7 +374,7 @@ fn double_inner(
 // <21> := 响应第1组召唤
 // 至
 // <36> := 响应第16组召唤
-pub async fn double(
+pub fn double(
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
@@ -801,7 +826,7 @@ fn measured_value_float_inner(
 // <21> := 响应第1组召唤
 // 至
 // <36> := 响应第16组召唤
-pub async fn measured_value_float(
+pub fn measured_value_float(
     is_sequence: bool,
     cot: CauseOfTransmission,
     ca: CommonAddr,
@@ -936,7 +961,7 @@ fn integrated_totals_inner(
 // <39> := 响应第2组计数量召唤
 // <40> := 响应第3组计数量召唤
 // <41> := 响应第4组计数量召唤
-pub async fn integrated_totals(
+pub fn integrated_totals(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     infos: Vec<BinaryCounterReadingInfo>,
@@ -1037,7 +1062,7 @@ impl Asdu {
     }
 
     // [M_DP_NA_1], [M_DP_TA_1] or [M_DP_TB_1] 获得双点信息体集合
-    fn get_double_point(&mut self) -> Result<Vec<DoublePointInfo>> {
+    pub fn get_double_point(&mut self) -> Result<Vec<DoublePointInfo>> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
@@ -1068,7 +1093,7 @@ impl Asdu {
     }
 
     // [M_ME_NA_1], [M_ME_TA_1],[ M_ME_TD_1] or [M_ME_ND_1] 获得测量值,规一化值信息体集合
-    fn get_measured_value_normal(&mut self) -> Result<Vec<MeasuredValueNormalInfo>> {
+    pub fn get_measured_value_normal(&mut self) -> Result<Vec<MeasuredValueNormalInfo>> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
@@ -1114,7 +1139,7 @@ impl Asdu {
     }
 
     // [M_ME_NB_1], [M_ME_TB_1] or [M_ME_TE_1] 获得测量值，标度化值信息体集合
-    fn get_measured_value_scaled(&mut self) -> Result<Vec<MeasuredValueScaledInfo>> {
+    pub fn get_measured_value_scaled(&mut self) -> Result<Vec<MeasuredValueScaledInfo>> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
@@ -1151,7 +1176,7 @@ impl Asdu {
     }
 
     // [M_ME_NC_1], [M_ME_TC_1] or [M_ME_TF_1]. 获得测量值,短浮点数信息体集合
-    fn get_measured_value_float(&mut self) -> Result<Vec<MeasuredValueFloatInfo>> {
+    pub fn get_measured_value_float(&mut self) -> Result<Vec<MeasuredValueFloatInfo>> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
@@ -1183,7 +1208,7 @@ impl Asdu {
     }
 
     // [M_IT_NA_1], [M_IT_TA_1] or [M_IT_TB_1]. 获得累计量信息体集合
-    fn get_integrated_totals(&mut self) -> Result<Vec<BinaryCounterReadingInfo>> {
+    pub fn get_integrated_totals(&mut self) -> Result<Vec<BinaryCounterReadingInfo>> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
@@ -1232,11 +1257,6 @@ mod tests {
     use crate::frame::asdu::{CauseOfTransmission, Identifier, VariableStruct};
 
     use super::*;
-
-    // let tm0_cp56time2a = Utc.with_ymd_and_hms(2019, 6, 5, 4, 3, 0);
-    // let tm0_cp24time2a = Utc.with_ymd_and_hms(2019, 6, 5, 0, 0, 0);
-    // let tm0_cp56time2a_bytes = [0x01, 0x02, 0x03, 0x04, 0x65, 0x06, 0x13];
-    // let tm0_cp24time2a_bytes = [0x01, 0x02, 0x03];
 
     #[test]
     fn decode_singlepiont() -> Result<()> {
@@ -1496,23 +1516,4 @@ mod tests {
 
         Ok(())
     }
-
-    // #[test]
-    // fn decode_measured_value_float() -> Result<()> {
-    //     struct Test {
-    //         name: String,
-    //         asdu: Asdu,
-    //         want: Vec<MeasuredValueFloatInfo>,
-    //     }
-    //     let mut tests = Vec::new();
-    //     tests.push(Test {
-    //         name: "华能虚拟电厂遥测".into(),
-    //         asdu: Asdu {
-    //             identifier: Identifier {
-    //                 type_id: TypeID::
-    //             }
-    //         }
-    //     })
-    //     Ok(())
-    // }
 }

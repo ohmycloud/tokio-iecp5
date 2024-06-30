@@ -100,7 +100,7 @@ pub fn interrogation_cmd(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn counter_interrogation_cmd(
+pub fn counter_interrogation_cmd(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     qcc: ObjectQCC,
@@ -136,11 +136,7 @@ pub async fn counter_interrogation_cmd(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn read_cmd(
-    cot: CauseOfTransmission,
-    ca: CommonAddr,
-    ioa: InfoObjAddr,
-) -> Result<Asdu, Error> {
+pub fn read_cmd(cot: CauseOfTransmission, ca: CommonAddr, ioa: InfoObjAddr) -> Result<Asdu, Error> {
     let mut cot = cot;
     cot.cause().set(Cause::Request);
 
@@ -173,7 +169,7 @@ pub async fn read_cmd(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn clock_synchronization_cmd(
+pub fn clock_synchronization_cmd(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     time: DateTime<Utc>,
@@ -210,7 +206,7 @@ pub async fn clock_synchronization_cmd(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn test_command(cot: CauseOfTransmission, ca: CommonAddr) -> Result<Asdu, Error> {
+pub fn test_command(cot: CauseOfTransmission, ca: CommonAddr) -> Result<Asdu, Error> {
     let mut cot = cot;
     cot.cause().set(Cause::Activation);
 
@@ -243,7 +239,7 @@ pub async fn test_command(cot: CauseOfTransmission, ca: CommonAddr) -> Result<As
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn reset_process_cmd(
+pub fn reset_process_cmd(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     qrp: QualifierOfResetProcessCmd,
@@ -281,7 +277,7 @@ pub async fn reset_process_cmd(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn delay_acquire_command(
+pub fn delay_acquire_command(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     msec: u16,
@@ -321,7 +317,7 @@ pub async fn delay_acquire_command(
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-pub async fn test_command_cp56time2a(
+pub fn test_command_cp56time2a(
     cot: CauseOfTransmission,
     ca: CommonAddr,
     time: DateTime<Utc>,

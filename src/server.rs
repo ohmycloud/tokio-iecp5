@@ -1,7 +1,8 @@
 use std::{collections::VecDeque, io, net::SocketAddr, ops::Deref, time::Duration};
 
 use chrono::{DateTime, Utc};
-use futures::{Future, SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt};
+use std::future::Future;
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::{TcpListener, TcpStream},
@@ -29,9 +30,9 @@ pub struct Server {
 pub trait ServerHandler {
     type Future: Future<Output = Result<Vec<Asdu>, Error>> + Send;
 
-    fn call_interrogation(&self, req: Asdu, qoi: ObjectQOI) -> Self::Future;
-    fn call_counter_interrogation(&self, req: Asdu, qcc: ObjectQCC) -> Self::Future;
-    fn call(&self, req: Asdu) -> Self::Future;
+    fn call_interrogation(&self, _: Asdu, qoi: ObjectQOI) -> Self::Future;
+    fn call_counter_interrogation(&self, _: Asdu, qcc: ObjectQCC) -> Self::Future;
+    fn call(&self, asdu: Asdu) -> Self::Future;
 }
 
 impl<D> ServerHandler for D

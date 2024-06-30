@@ -3,8 +3,8 @@ use std::{future, io, net::SocketAddr, sync::Arc};
 
 use iecp5::{
     asdu::{Asdu, Cause, CauseOfTransmission, InfoObjAddr},
-    csys::ObjectQOI,
-    mproc::{single, ObjectSIQ, SinglePointInfo},
+    csys::{ObjectQCC, ObjectQOI},
+    mproc::{double, single, DoublePointInfo, ObjectSIQ, SinglePointInfo},
     Error, Server, ServerHandler,
 };
 use tokio::{
@@ -21,7 +21,7 @@ impl ServerHandler for ExampleServer {
         future::ready(Ok(Vec::new()))
     }
 
-    fn call_interrogation(&self, _req: Asdu, _qoi: ObjectQOI) -> Self::Future {
+    fn call_interrogation(&self, _: Asdu, _qoi: ObjectQOI) -> Self::Future {
         let mut asdus = vec![];
         let infos = vec![
             SinglePointInfo::new(
@@ -46,8 +46,33 @@ impl ServerHandler for ExampleServer {
         future::ready(Ok(asdus))
     }
 
-    fn call_counter_interrogation(&self, _req: Asdu, _qcc: iecp5::csys::ObjectQCC) -> Self::Future {
-        todo!()
+    fn call_counter_interrogation(&self, _: Asdu, _qcc: ObjectQCC) -> Self::Future {
+        let mut asdus = vec![];
+        let sg_infos = vec![
+            SinglePointInfo::new_single(2, false),
+            SinglePointInfo::new_single(3, true),
+        ];
+        let db_infos = vec![
+            DoublePointInfo::new_double(655, 2),
+            DoublePointInfo::new_double(658, 2),
+        ];
+        let sg_asdu = single(
+            true,
+            CauseOfTransmission::new(false, false, Cause::InterrogatedByStation),
+            0,
+            sg_infos,
+        )
+        .unwrap();
+        let db_asdu = double(
+            false,
+            CauseOfTransmission::new(false, false, Cause::InterrogatedByStation),
+            0,
+            db_infos,
+        )
+        .unwrap();
+        asdus.push(sg_asdu);
+        asdus.push(db_asdu);
+        future::ready(Ok(asdus))
     }
 }
 

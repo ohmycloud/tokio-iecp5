@@ -25,7 +25,7 @@ pub const INVALID_COMMON_ADDR: u16 = 0;
 // to C_IC_NA_1, C_CI_NA_1, C_CS_NA_1 and C_RP_NA_1.
 // When in 8-bit mode 255 is mapped to this value on the fly.
 #[allow(dead_code)]
-const GLOBAL_COMMON_ADDR: u16 = 65535;
+const GLOBAL_COMMON_ADDR: u16 = 255;
 
 pub const IDENTIFIER_SIZE: usize = 6;
 
@@ -43,7 +43,9 @@ pub struct Identifier {
     pub type_id: TypeID,
     pub variable_struct: VariableStruct,
     pub cot: CauseOfTransmission,
+    // (一般不使用, 置0)
     pub orig_addr: OriginAddr,
+    // (1~254为站地址, 255为全局地址, 0不使用)
     pub common_addr: CommonAddr,
 }
 

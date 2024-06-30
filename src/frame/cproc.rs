@@ -24,12 +24,37 @@ pub struct SingleCommandInfo {
     pub time: Option<DateTime<Utc>>,
 }
 
+impl SingleCommandInfo {
+    pub fn new(addr: u16, v: bool, se: bool) -> Self {
+        let ioa = InfoObjAddr::new(0, addr);
+        let sco = ObjectSCO::new(v, u1!(0), u5!(0), se);
+        SingleCommandInfo {
+            ioa,
+            sco,
+            time: None,
+        }
+    }
+}
+
 // 双命令 信息体
 #[derive(Debug, PartialEq)]
 pub struct DoubleCommandInfo {
     pub ioa: InfoObjAddr,
     pub dco: ObjectDCO,
     pub time: Option<DateTime<Utc>>,
+}
+
+impl DoubleCommandInfo {
+    pub fn new(addr: u16, v: u8, se: bool) -> Self {
+        let v = v % 3;
+        let ioa = InfoObjAddr::new(0, addr);
+        let dco = ObjectDCO::new(u2::new(v).unwrap(), u5!(0), se);
+        DoubleCommandInfo {
+            ioa,
+            dco,
+            time: None,
+        }
+    }
 }
 
 // 设置命令，规一化值 信息体
@@ -41,6 +66,19 @@ pub struct SetpointCommandNormalInfo {
     pub time: Option<DateTime<Utc>>,
 }
 
+impl SetpointCommandNormalInfo {
+    pub fn new(addr: u16, v: i16) -> Self {
+        let ioa = InfoObjAddr::new(0, addr);
+        let qos = ObjectQOS::new(u7!(0), u1!(0));
+        SetpointCommandNormalInfo {
+            ioa,
+            nva: v,
+            qos,
+            time: None,
+        }
+    }
+}
+
 // 设定命令,标度化值 信息体
 #[derive(Debug, PartialEq)]
 pub struct SetpointCommandScaledInfo {
@@ -48,6 +86,19 @@ pub struct SetpointCommandScaledInfo {
     pub sva: i16,
     pub qos: ObjectQOS,
     pub time: Option<DateTime<Utc>>,
+}
+
+impl SetpointCommandScaledInfo {
+    pub fn new(addr: u16, v: i16) -> Self {
+        let ioa = InfoObjAddr::new(0, addr);
+        let qos = ObjectQOS::new(u7!(0), u1!(0));
+        SetpointCommandScaledInfo {
+            ioa,
+            sva: v,
+            qos,
+            time: None,
+        }
+    }
 }
 
 // 设定命令, 短浮点数 信息体
@@ -58,13 +109,26 @@ pub struct SetpointCommandFloatInfo {
     pub time: Option<DateTime<Utc>>,
 }
 
+impl SetpointCommandFloatInfo {
+    pub fn new(addr: u16, v: f32) -> Self {
+        let ioa = InfoObjAddr::new(0, addr);
+        let qos = ObjectQOS::new(u7!(0), u1!(0));
+        SetpointCommandFloatInfo {
+            ioa,
+            r: v,
+            qos,
+            time: None,
+        }
+    }
+}
+
 // 单命令 遥控信息
 bit_struct! {
     pub struct ObjectSCO(u8) {
-        scs: u1,    // 控制状态
+        scs: bool,  // 控制状态
         res: u1,    // 预留: 置0
         qu: u5,     // 输出方式: 0:被控确定, 1:短脉冲, 2:长脉冲, 3:持续脉冲
-        se: u1,     // 选择标志: 0:执行, 1:选择
+        se: bool,   // 选择标志: 0:执行, 1:选择
     }
 }
 
@@ -76,7 +140,7 @@ bit_struct! {
         /// 输出方式: 0:被控确定, 1:短脉冲, 2:长脉冲, 3:持续脉冲
         qu: u5,
         /// 选择标志: 0:执行, 1:选择
-        se: u1,
+        se: bool,
     }
 }
 
