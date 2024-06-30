@@ -82,6 +82,12 @@ bit_struct! {
 
 }
 
+impl ObjectSIQ {
+    pub fn new_with_value(value: bool) -> Self {
+        ObjectSIQ::new(false, false, false, false, u3!(0), value)
+    }
+}
+
 // 双点遥信对象
 bit_struct! {
     pub struct ObjectDIQ(u8) {
@@ -1363,8 +1369,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_single() -> Result<()> {
+    fn test_single() -> Result<()> {
         struct Args {
             is_sequence: bool,
             cot: CauseOfTransmission,

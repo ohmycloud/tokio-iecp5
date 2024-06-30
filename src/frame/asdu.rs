@@ -19,8 +19,7 @@ pub(crate) const ASDU_SIZE_MAX: usize = 249;
 // bytes |     [1,2,3]    |              |                      |
 
 // InvalidCommonAddr is the invalid common address.
-#[allow(dead_code)]
-const INVALID_COMMON_ADDR: u16 = 0;
+pub const INVALID_COMMON_ADDR: u16 = 0;
 
 // GlobalCommonAddr is the broadcast address. Use is restricted
 // to C_IC_NA_1, C_CI_NA_1, C_CS_NA_1 and C_RP_NA_1.
@@ -318,6 +317,14 @@ bit_struct! {
 // InfoObjAddrIrrelevant Zero means that the information object address is irrelevant.
 pub const INFO_OBJ_ADDR_IRRELEVANT: u16 = 0;
 
+impl Asdu {
+    pub fn mirror(&self, cause: Cause) -> Self {
+        let mut asdu = self.clone();
+        asdu.identifier.cot.cause().set(cause);
+        asdu
+    }
+}
+
 impl TryFrom<Bytes> for Asdu {
     type Error = anyhow::Error;
 
@@ -357,9 +364,6 @@ impl TryInto<Bytes> for Asdu {
         Ok(buf.freeze())
     }
 }
-
-/// 通过raw解析成Obj
-impl Asdu {}
 
 #[cfg(test)]
 mod tests {

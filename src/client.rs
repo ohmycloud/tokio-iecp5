@@ -7,7 +7,7 @@ use tokio::{
     select,
     sync::{mpsc, Mutex},
 };
-use tokio_util::codec::{FramedRead, FramedWrite};
+use tokio_util::codec::Framed;
 
 use crate::{
     apci::{
@@ -22,7 +22,7 @@ use crate::{
 
 // TODO:
 pub trait ClientHandler: Debug + Send + Sync {
-    fn call(&self, asdu: Asdu) -> Option<Vec<Asdu>>;
+    fn call(&self, asdu: Asdu) -> Result<Vec<Asdu>, Error>;
 }
 
 #[derive(Debug)]
@@ -72,16 +72,9 @@ impl Client {
         self.sender = Some(tx.clone());
 
         let transport = TcpStream::connect(self.option.socket_addr).await?;
-        let (r, w) = transport.into_split();
-        let mut sink = FramedWrite::new(w, Codec);
-        let mut stream = FramedRead::new(r, Codec);
+        let mut framed = Framed::new(transport, Codec);
 
         tokio::spawn(async move {
-            struct CleanUp {
-                is_con: Arc<Mutex<bool>>,
-                is_act: Arc<Mutex<bool>>,
-            }
-
             let mut send_sn = 0;
             let mut ack_sendsn = 0;
             let mut rcv_sn = 0;
@@ -142,7 +135,7 @@ impl Client {
                                     let apdu = new_iframe(asdu, send_sn, rcv_sn);
                                     if let ApciKind::I(iapci) = ApciKind::from(apdu.apci) {
                                         log::debug!("[TX] I-frame {:?} {:?}", iapci, apdu.asdu);
-                                        sink.send(apdu).await?;
+                                        framed.send(apdu).await?;
                                         pending.push_back(SeqPending {
                                             seq: iapci.send_sn,
                                             send_time: Utc::now()
@@ -160,12 +153,12 @@ impl Client {
                                     }
                                     let apdu = new_uframe(uapci.function);
                                     log::debug!("[TX] U-frame {:?}", uapci);
-                                    sink.send(apdu).await?;
+                                    framed.send(apdu).await?;
                                 }
                                 Request::S(sapci) => {
                                     let apdu = new_sframe(sapci.rcv_sn);
                                     log::debug!("[TX] S-frame {:?}", sapci);
-                                    sink.send(apdu).await?;
+                                    framed.send(apdu).await?;
                                 }
                             }
                         } else {
@@ -174,7 +167,7 @@ impl Client {
                         }
                     }
 
-                    apdu = stream.next() => match apdu {
+                    apdu = framed.next() => match apdu {
                         Some(apdu) => {
                             let apdu = apdu?;
                             idle_timeout3_sine = Utc::now(); // 每收到一个i帧,S帧,U帧, 重置空闲定时器 t3
@@ -196,10 +189,8 @@ impl Client {
 
 
                                     if let Some(asdu) = apdu.asdu {
-                                        if let Some(asdus) = handler.call(asdu) {
-                                            for asdu in asdus {
-                                                tx.send(Request::I(asdu))?;
-                                            }
+                                        for asdu in handler.call(asdu)? {
+                                            tx.send(Request::I(asdu))?;
                                         }
                                     }
 

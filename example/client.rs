@@ -12,17 +12,17 @@ use tokio::time::sleep;
 struct ExampleHandler;
 
 impl ClientHandler for ExampleHandler {
-    fn call(&self, asdu: Asdu) -> Option<Vec<Asdu>> {
+    fn call(&self, asdu: Asdu) -> Result<Vec<Asdu>, Error> {
         let mut asdu = asdu;
         match asdu.identifier.type_id {
-            TypeID::C_IC_NA_1 => None,
+            TypeID::C_IC_NA_1 => Ok(vec![]),
             TypeID::M_SP_NA_1 => {
-                let sg = asdu.get_single_point();
+                let sg = asdu.get_single_point()?;
                 log::info!("ClientHandler {sg:?}");
-                None
+                Ok(vec![])
             }
 
-            _ => None,
+            _ => Ok(vec![]),
         }
     }
 }
