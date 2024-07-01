@@ -6,7 +6,8 @@ use std::{
 
 use anyhow::Result;
 use futures::future;
-use iecp5::{
+use tokio::{sync::oneshot, time::sleep};
+use tokio_iecp5::{
     asdu::{Asdu, Cause, CauseOfTransmission, CommonAddr, TypeID},
     cproc::{
         DoubleCommandInfo, SetpointCommandFloatInfo, SetpointCommandNormalInfo,
@@ -15,7 +16,6 @@ use iecp5::{
     csys::{ObjectQCC, ObjectQOI},
     Client, ClientHandler, ClientOption, Error,
 };
-use tokio::{sync::oneshot, time::sleep};
 
 #[allow(dead_code)]
 enum IEC104DateType {

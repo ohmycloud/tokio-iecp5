@@ -365,25 +365,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iecp5"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bit-struct",
- "byteorder",
- "bytes",
- "chrono",
- "env_logger",
- "futures",
- "futures-util",
- "log",
- "thiserror",
- "tokio",
- "tokio-test",
- "tokio-util",
-]
-
-[[package]]
 name = "is_terminal_polyfill"
 version = "1.70.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -685,6 +666,25 @@ dependencies = [
  "socket2",
  "tokio-macros",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "tokio-iecp5"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bit-struct",
+ "byteorder",
+ "bytes",
+ "chrono",
+ "env_logger",
+ "futures",
+ "futures-util",
+ "log",
+ "thiserror",
+ "tokio",
+ "tokio-test",
+ "tokio-util",
 ]
 
 [[package]]
