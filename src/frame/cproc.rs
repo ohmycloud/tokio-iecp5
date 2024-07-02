@@ -46,7 +46,7 @@ pub struct DoubleCommandInfo {
 
 impl DoubleCommandInfo {
     pub fn new(addr: u16, v: u8, se: bool) -> Self {
-        let v = v % 3;
+        let v = v % 4;
         let ioa = InfoObjAddr::new(0, addr);
         let dco = ObjectDCO::new(u2::new(v).unwrap(), u5!(0), se);
         DoubleCommandInfo {
@@ -117,6 +117,24 @@ impl SetpointCommandFloatInfo {
             ioa,
             r: v,
             qos,
+            time: None,
+        }
+    }
+}
+
+// 比特串命令 信息体
+pub struct BitsString32CommandInfo {
+    pub ioa: InfoObjAddr,
+    pub bcr: i32,
+    pub time: Option<DateTime<Utc>>,
+}
+
+impl BitsString32CommandInfo {
+    pub fn new(addr: u16, v: i32) -> Self {
+        let ioa = InfoObjAddr::new(0, addr);
+        BitsString32CommandInfo {
+            ioa,
+            bcr: v,
             time: None,
         }
     }
@@ -520,6 +538,64 @@ pub fn set_point_cmd_float(
     })
 }
 
+// BitsString32Cmd sends a type [C_BO_NA_1] or [C_BO_TA_1]. 比特串命令,只有单个信息对象(SQ = 0)
+// [C_BO_NA_1] See companion standard 101, subclass 7.3.2.7
+// [C_BO_TA_1] See companion standard 101,
+// 传送原因(coa)用于
+// 控制方向：
+// <6> := 激活
+// <8> := 停止激活
+// 监视方向：
+// <7> := 激活确认
+// <9> := 停止激活确认
+// <10> := 激活终止
+// <44> := 未知的类型标识
+// <45> := 未知的传送原因
+// <46> := 未知的应用服务数据单元公共地址
+// <47> := 未知的信息对象地址
+pub fn bits_string32_cmd(
+    type_id: TypeID,
+    cot: CauseOfTransmission,
+    ca: CommonAddr,
+    cmd: BitsString32CommandInfo,
+) -> Result<Asdu, Error> {
+    let mut cot = cot;
+    let cause = cot.cause().get();
+
+    if !(cause == Cause::Activation || cause == Cause::Deactivation) {
+        return Err(Error::ErrCmdCause(cot));
+    }
+
+    let variable_struct = VariableStruct::new(u1::new(0).unwrap(), u7::new(1).unwrap());
+
+    let mut buf = vec![];
+    buf.write_u24::<LittleEndian>(cmd.ioa.raw().value())?;
+    buf.write_i32::<LittleEndian>(cmd.bcr)?;
+
+    match type_id {
+        TypeID::C_BO_NA_1 => (),
+        TypeID::C_BO_TA_1 => {
+            if let Some(time) = cmd.time {
+                buf.extend_from_slice(&cp56time2a(time));
+            } else {
+                buf.extend_from_slice(&cp56time2a(Utc::now()));
+            }
+        }
+        _ => return Err(Error::ErrTypeIDNotMatch(type_id)),
+    }
+
+    Ok(Asdu {
+        identifier: Identifier {
+            type_id,
+            variable_struct,
+            cot,
+            orig_addr: 0,
+            common_addr: ca,
+        },
+        raw: Bytes::from(buf),
+    })
+}
+
 impl Asdu {
     // [C_SC_NA_1] or [C_SC_TA_1] 获取单命令信息体
     pub fn get_single_cmd(&mut self) -> Result<SingleCommandInfo> {
@@ -614,5 +690,22 @@ impl Asdu {
         }
 
         Ok(SetpointCommandFloatInfo { ioa, r, qos, time })
+    }
+
+    // [C_BO_NA_1] or [C_BO_TA_1] 获取比特串命令信息体
+    pub fn get_bits_string32_cmd(&mut self) -> Result<BitsString32CommandInfo> {
+        let mut rdr = Cursor::new(&self.raw);
+        let ioa =
+            InfoObjAddr::try_from(u24::new(rdr.read_u24::<LittleEndian>()?).unwrap()).unwrap();
+        let bcr = rdr.read_i32::<LittleEndian>()?;
+
+        let mut time = None;
+        match self.identifier.type_id {
+            TypeID::C_BO_NA_1 => (),
+            TypeID::C_BO_TA_1 => time = decode_cp56time2a(&mut rdr)?,
+            _ => panic!("ErrTypeIDNotMatch"),
+        }
+
+        Ok(BitsString32CommandInfo { ioa, bcr, time })
     }
 }

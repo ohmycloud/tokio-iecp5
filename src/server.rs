@@ -237,16 +237,19 @@ impl ServerSession {
                                     let type_id = asdu.identifier.type_id;
                                     match type_id {
                                         TypeID::C_IC_NA_1 => {
-                                            if !( cause == Cause::Activation || cause == Cause::Deactivation) {
+                                            if !(cause == Cause::Activation || cause == Cause::Deactivation) {
                                                 tx.send(Request::I(asdu.mirror(Cause::UnknownCOT)))?;
+                                                continue;
                                             }
                                             if ca == INVALID_COMMON_ADDR {
                                                 tx.send(Request::I(asdu.mirror(Cause::UnknownCA)))?;
+                                                continue;
                                             }
                                             let (mut ioa, qoi) = asdu.get_interrogation_cmd()?;
                                             let ioa = ioa.addr().get();
-                                            if ioa == INFO_OBJ_ADDR_IRRELEVANT {
+                                            if ioa != INFO_OBJ_ADDR_IRRELEVANT {
                                                 tx.send(Request::I(asdu.mirror(Cause::UnknownIOA)))?;
+                                                continue;
                                             }
                                             for asdu in handler.call_interrogation(asdu, qoi).await? {
                                                 tx.send(Request::I(asdu))?;
@@ -255,17 +258,21 @@ impl ServerSession {
                                         TypeID::C_CI_NA_1 => {
                                             if cause != Cause::Activation {
                                                 tx.send(Request::I(asdu.mirror(Cause::UnknownCOT)))?;
+                                                continue;
                                             }
                                             if ca == INVALID_COMMON_ADDR {
                                                 tx.send(Request::I(asdu.mirror(Cause::UnknownCA)))?;
+                                                continue;
                                             }
                                             let (mut ioa, qcc) = asdu.get_counter_interrogation_cmd()?;
                                             let ioa = ioa.addr().get();
-                                            if ioa == INFO_OBJ_ADDR_IRRELEVANT {
+                                            if ioa != INFO_OBJ_ADDR_IRRELEVANT {
                                                 tx.send(Request::I(asdu.mirror(Cause::UnknownIOA)))?;
+                                                continue;
                                             }
                                             for asdu in handler.call_counter_interrogation(asdu, qcc).await? {
                                                 tx.send(Request::I(asdu))?;
+                                                continue;
                                             }
                                         }
                                         // TypeID::C_RD_NA_1 => {

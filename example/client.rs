@@ -1,17 +1,17 @@
 use std::{
+    future,
     net::SocketAddr,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
 use anyhow::Result;
-use futures::future;
 use tokio::{sync::oneshot, time::sleep};
 use tokio_iecp5::{
     asdu::{Asdu, Cause, CauseOfTransmission, CommonAddr, TypeID},
     cproc::{
-        DoubleCommandInfo, SetpointCommandFloatInfo, SetpointCommandNormalInfo,
-        SetpointCommandScaledInfo, SingleCommandInfo,
+        BitsString32CommandInfo, DoubleCommandInfo, SetpointCommandFloatInfo,
+        SetpointCommandNormalInfo, SetpointCommandScaledInfo, SingleCommandInfo,
     },
     csys::{ObjectQCC, ObjectQOI},
     Client, ClientHandler, ClientOption, Error,
@@ -27,19 +27,19 @@ enum IEC104DateType {
     Bcr,
 }
 
-struct IEC104Client {
+pub struct IEC104Client {
     remote_addr: CommonAddr,
-    client: Arc<Client<Arc<IEC104ClientHanlder>>>,
-    inner: Arc<IEC104ClientHanlder>,
+    // TODO: change to mutex
+    client: Arc<Client<Arc<IEC104ClientHandler>>>,
+    inner: Arc<IEC104ClientHandler>,
     shutdown_tx: Option<oneshot::Sender<()>>,
     terminated_rx: Option<oneshot::Receiver<()>>,
 }
 
-#[allow(dead_code)]
 impl IEC104Client {
     pub fn new(socket_addr: SocketAddr, remote_addr: CommonAddr) -> Self {
         let op = ClientOption::new(socket_addr, true);
-        let inner = Arc::new(IEC104ClientHanlder::new());
+        let inner = Arc::new(IEC104ClientHandler::new());
         let client = Arc::new(Client::new(inner.clone(), op));
 
         IEC104Client {
@@ -159,6 +159,8 @@ impl IEC104Client {
         }
         if let Some(rx) = self.terminated_rx.take() {
             rx.await.unwrap();
+            // TODO:
+            // self.client.stop().await
         }
     }
 
@@ -266,13 +268,21 @@ impl IEC104Client {
         self.inner.bcr_space.lock().unwrap()[addr as usize]
     }
 
-    pub fn write_bcr(&self, _addr: u16, _v: i32) -> anyhow::Result<()> {
-        todo!()
+    pub async fn write_bcr(&self, addr: u16, v: i32) -> Result<(), Error> {
+        let cmd = BitsString32CommandInfo::new(addr, v);
+        self.client
+            .bits_string32_cmd(
+                TypeID::C_BO_NA_1,
+                CauseOfTransmission::new(false, false, Cause::Activation),
+                self.remote_addr,
+                cmd,
+            )
+            .await
     }
 }
 
 #[derive(Debug, Clone)]
-struct IEC104ClientHanlder {
+struct IEC104ClientHandler {
     siq_space: Arc<Mutex<[Option<bool>; 65536]>>,
     diq_space: Arc<Mutex<[Option<u8>; 65536]>>,
     nva_space: Arc<Mutex<[Option<i16>; 65536]>>,
@@ -281,9 +291,9 @@ struct IEC104ClientHanlder {
     bcr_space: Arc<Mutex<[Option<i32>; 65536]>>,
 }
 
-impl IEC104ClientHanlder {
+impl IEC104ClientHandler {
     pub fn new() -> Self {
-        IEC104ClientHanlder {
+        IEC104ClientHandler {
             siq_space: Arc::new(Mutex::new([None; 65536])),
             diq_space: Arc::new(Mutex::new([None; 65536])),
             nva_space: Arc::new(Mutex::new([None; 65536])),
@@ -294,14 +304,14 @@ impl IEC104ClientHanlder {
     }
 }
 
-impl ClientHandler for IEC104ClientHanlder {
+impl ClientHandler for IEC104ClientHandler {
     type Future = future::Ready<Result<Vec<Asdu>, Error>>;
 
     fn call(&self, asdu: Asdu) -> Self::Future {
         let mut asdu = asdu;
         match asdu.identifier.type_id {
             TypeID::C_IC_NA_1 => future::ready(Ok(vec![])),
-            TypeID::M_SP_NA_1 => {
+            TypeID::M_SP_NA_1 | TypeID::M_SP_TA_1 | TypeID::M_SP_TB_1 => {
                 let sgs = asdu.get_single_point().unwrap();
                 for mut sg in sgs {
                     self.siq_space.lock().unwrap()[sg.ioa.addr().get() as usize] =
@@ -309,11 +319,40 @@ impl ClientHandler for IEC104ClientHanlder {
                 }
                 future::ready(Ok(vec![]))
             }
-            TypeID::M_DP_NA_1 => {
+            TypeID::M_DP_NA_1 | TypeID::M_DP_TA_1 | TypeID::M_DP_TB_1 => {
                 let dbs = asdu.get_double_point().unwrap();
                 for mut db in dbs {
                     self.diq_space.lock().unwrap()[db.ioa.addr().get() as usize] =
                         Some(db.diq.spi().get().value());
+                }
+                future::ready(Ok(vec![]))
+            }
+
+            TypeID::M_ME_NA_1 | TypeID::M_ME_TA_1 | TypeID::M_ME_TD_1 | TypeID::M_ME_ND_1 => {
+                let nvas = asdu.get_measured_value_normal().unwrap();
+                for mut v in nvas {
+                    self.nva_space.lock().unwrap()[v.ioa.addr().get() as usize] = Some(v.nva);
+                }
+                future::ready(Ok(vec![]))
+            }
+            TypeID::M_ME_NB_1 | TypeID::M_ME_TB_1 | TypeID::M_ME_TE_1 => {
+                let svas = asdu.get_measured_value_scaled().unwrap();
+                for mut v in svas {
+                    self.sva_space.lock().unwrap()[v.ioa.addr().get() as usize] = Some(v.sva);
+                }
+                future::ready(Ok(vec![]))
+            }
+            TypeID::M_ME_NC_1 | TypeID::M_ME_TC_1 | TypeID::M_ME_TF_1 => {
+                let rs = asdu.get_measured_value_float().unwrap();
+                for mut v in rs {
+                    self.r_space.lock().unwrap()[v.ioa.addr().get() as usize] = Some(v.r);
+                }
+                future::ready(Ok(vec![]))
+            }
+            TypeID::M_IT_NA_1 | TypeID::M_IT_TA_1 | TypeID::M_IT_TB_1 => {
+                let bcrs = asdu.get_integrated_totals().unwrap();
+                for mut v in bcrs {
+                    self.bcr_space.lock().unwrap()[v.ioa.addr().get() as usize] = Some(v.bcr.value);
                 }
                 future::ready(Ok(vec![]))
             }

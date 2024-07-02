@@ -51,7 +51,10 @@ pub struct DoublePointInfo {
 
 impl DoublePointInfo {
     pub fn new_double(addr: u16, v: u8) -> Self {
-        let v = v % 3;
+        if v > 3 {
+            log::warn!("[frame] new_double: value out of range: {v}");
+        }
+        let v = v % 4;
         let ioa = InfoObjAddr::new(0, addr);
         let diq = ObjectDIQ::new(false, false, false, false, u2!(0), u2::new(v).unwrap());
 

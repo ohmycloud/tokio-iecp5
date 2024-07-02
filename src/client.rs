@@ -22,9 +22,10 @@ use crate::{
     },
     asdu::{Asdu, CauseOfTransmission, CommonAddr, TypeID},
     cproc::{
-        double_cmd, set_point_cmd_float, set_point_cmd_normal, set_point_cmd_scaled, single_cmd,
-        DoubleCommandInfo, SetpointCommandFloatInfo, SetpointCommandNormalInfo,
-        SetpointCommandScaledInfo, SingleCommandInfo,
+        bits_string32_cmd, double_cmd, set_point_cmd_float, set_point_cmd_normal,
+        set_point_cmd_scaled, single_cmd, BitsString32CommandInfo, DoubleCommandInfo,
+        SetpointCommandFloatInfo, SetpointCommandNormalInfo, SetpointCommandScaledInfo,
+        SingleCommandInfo,
     },
     csys::{counter_interrogation_cmd, interrogation_cmd, ObjectQCC, ObjectQOI},
     Codec, Error,
@@ -254,6 +255,18 @@ where
         cmd: SetpointCommandFloatInfo,
     ) -> Result<(), Error> {
         self.send_asdu(set_point_cmd_float(type_id, cot, ca, cmd)?)
+            .await
+    }
+
+    // bcr
+    pub async fn bits_string32_cmd(
+        &self,
+        type_id: TypeID,
+        cot: CauseOfTransmission,
+        ca: CommonAddr,
+        cmd: BitsString32CommandInfo,
+    ) -> Result<(), Error> {
+        self.send_asdu(bits_string32_cmd(type_id, cot, ca, cmd)?)
             .await
     }
 }

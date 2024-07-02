@@ -1,78 +1,102 @@
 use anyhow::Result;
-use std::{future, io, net::SocketAddr, sync::Arc};
+use std::{
+    collections::HashMap,
+    future, io,
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+};
 
 use tokio::{
     net::{TcpListener, TcpStream},
     select,
 };
 use tokio_iecp5::{
-    asdu::{Asdu, Cause, CauseOfTransmission, InfoObjAddr},
+    asdu::{Asdu, Cause, CauseOfTransmission, InfoObjAddr, TypeID},
     csys::{ObjectQCC, ObjectQOI},
     mproc::{double, single, DoublePointInfo, ObjectSIQ, SinglePointInfo},
     Error, Server, ServerHandler,
 };
 
-struct ExampleServer;
+struct ExampleServer {
+    siq: Arc<Mutex<HashMap<u16, bool>>>,
+    diq: Arc<Mutex<HashMap<u16, u8>>>,
+}
+
+impl ExampleServer {
+    pub fn new(siq: HashMap<u16, bool>, diq: HashMap<u16, u8>) -> Self {
+        ExampleServer {
+            siq: Arc::new(Mutex::new(siq)),
+            diq: Arc::new(Mutex::new(diq)),
+        }
+    }
+}
 
 impl ServerHandler for ExampleServer {
     type Future = future::Ready<Result<Vec<Asdu>, Error>>;
 
-    fn call(&self, _asdu: Asdu) -> Self::Future {
+    fn call(&self, asdu: Asdu) -> Self::Future {
+        let mut asdu = asdu;
+        let type_id = asdu.identifier.type_id;
+        match type_id {
+            TypeID::C_SC_NA_1 | TypeID::C_SC_TA_1 => {
+                let mut single_cmd = asdu.get_single_cmd().unwrap();
+                let ad = single_cmd.ioa.addr().get();
+                let v = single_cmd.sco.scs().get();
+                if let Some(value) = self.siq.lock().unwrap().get_mut(&ad) {
+                    *value = v;
+                }
+            }
+            TypeID::C_DC_NA_1 | TypeID::C_DC_TA_1 => {
+                let mut double_cmd = asdu.get_double_cmd().unwrap();
+                let ad = double_cmd.ioa.addr().get();
+                let v = double_cmd.dco.dcs().get().value();
+                if let Some(value) = self.diq.lock().unwrap().get_mut(&ad) {
+                    *value = v;
+                }
+            }
+            _ => (),
+        };
         future::ready(Ok(Vec::new()))
     }
 
     fn call_interrogation(&self, _: Asdu, _qoi: ObjectQOI) -> Self::Future {
         let mut asdus = vec![];
-        let infos = vec![
-            SinglePointInfo::new(
-                InfoObjAddr::new(0, 0),
-                ObjectSIQ::new_with_value(false),
+
+        let mut siq_infos = vec![];
+        for (addr, v) in self.siq.lock().unwrap().iter() {
+            siq_infos.push(SinglePointInfo::new(
+                InfoObjAddr::new(0, *addr),
+                ObjectSIQ::new_with_value(*v),
                 None,
-            ),
-            SinglePointInfo::new(
-                InfoObjAddr::new(0, 1),
-                ObjectSIQ::new_with_value(true),
-                None,
-            ),
-        ];
-        let asdu = single(
-            true,
+            ));
+        }
+        let siq_asdu = single(
+            false,
             CauseOfTransmission::new(false, false, Cause::InterrogatedByStation),
             0,
-            infos,
+            siq_infos,
         )
         .unwrap();
-        asdus.push(asdu);
+        asdus.push(siq_asdu);
+
+        let mut diq_infos = vec![];
+        for (addr, v) in self.diq.lock().unwrap().iter() {
+            diq_infos.push(DoublePointInfo::new_double(*addr, *v));
+        }
+        let diq_asdu = double(
+            false,
+            CauseOfTransmission::new(false, false, Cause::InterrogatedByStation),
+            0,
+            diq_infos,
+        )
+        .unwrap();
+        asdus.push(diq_asdu);
+
         future::ready(Ok(asdus))
     }
 
     fn call_counter_interrogation(&self, _: Asdu, _qcc: ObjectQCC) -> Self::Future {
-        let mut asdus = vec![];
-        let sg_infos = vec![
-            SinglePointInfo::new_single(2, false),
-            SinglePointInfo::new_single(3, true),
-        ];
-        let db_infos = vec![
-            DoublePointInfo::new_double(655, 2),
-            DoublePointInfo::new_double(658, 2),
-        ];
-        let sg_asdu = single(
-            true,
-            CauseOfTransmission::new(false, false, Cause::InterrogatedByStation),
-            0,
-            sg_infos,
-        )
-        .unwrap();
-        let db_asdu = double(
-            false,
-            CauseOfTransmission::new(false, false, Cause::InterrogatedByStation),
-            0,
-            db_infos,
-        )
-        .unwrap();
-        asdus.push(sg_asdu);
-        asdus.push(db_asdu);
-        future::ready(Ok(asdus))
+        future::ready(Ok(Vec::new()))
     }
 }
 
@@ -110,7 +134,18 @@ async fn server(socket_addr: SocketAddr) -> Result<()> {
     println!("Starting up server on {socket_addr}");
     let listener = TcpListener::bind(socket_addr).await?;
     let server = Server::new(listener);
-    let handler = Arc::new(Box::new(ExampleServer));
+    let mut siq = HashMap::new();
+    let mut diq = HashMap::new();
+    siq.insert(100, false);
+    siq.insert(111, true);
+    siq.insert(121, false);
+    diq.insert(3000, 2);
+    diq.insert(2345, 3);
+    diq.insert(4523, 3);
+    diq.insert(4524, 3);
+    diq.insert(4525, 2);
+    diq.insert(4526, 1);
+    let handler = Arc::new(ExampleServer::new(siq, diq));
     let new_service = |_socket_addr| Ok(Some(handler.clone()));
     let on_connected = |stream, socket_addr| async move {
         accept_tcp_connection(stream, socket_addr, new_service)
