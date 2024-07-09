@@ -16,6 +16,9 @@ pub enum Error {
     #[error("asdu: [cause of transmission: {0:?}] for command not standard requirement")]
     ErrCmdCause(CauseOfTransmission),
 
+    #[error("Invalid frame")]
+    ErrInvalidFrame,
+
     #[error("SendError {0}")]
     ErrSendRequest(#[from] tokio::sync::mpsc::error::SendError<Request>),
 

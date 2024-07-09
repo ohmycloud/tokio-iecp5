@@ -1034,7 +1034,7 @@ pub async fn integrated_totals_cp56time2a(
 
 impl Asdu {
     // [M_SP_NA_1], [M_SP_TA_1] or [M_SP_TB_1] 获取单点信息信息体集合
-    pub fn get_single_point(&mut self) -> Result<Vec<SinglePointInfo>> {
+    pub fn get_single_point(&mut self) -> Result<Vec<SinglePointInfo>, Error> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
@@ -1065,7 +1065,7 @@ impl Asdu {
     }
 
     // [M_DP_NA_1], [M_DP_TA_1] or [M_DP_TB_1] 获得双点信息体集合
-    pub fn get_double_point(&mut self) -> Result<Vec<DoublePointInfo>> {
+    pub fn get_double_point(&mut self) -> Result<Vec<DoublePointInfo>, Error> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
@@ -1096,7 +1096,7 @@ impl Asdu {
     }
 
     // [M_ME_NA_1], [M_ME_TA_1],[ M_ME_TD_1] or [M_ME_ND_1] 获得测量值,规一化值信息体集合
-    pub fn get_measured_value_normal(&mut self) -> Result<Vec<MeasuredValueNormalInfo>> {
+    pub fn get_measured_value_normal(&mut self) -> Result<Vec<MeasuredValueNormalInfo>, Error> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
@@ -1142,7 +1142,7 @@ impl Asdu {
     }
 
     // [M_ME_NB_1], [M_ME_TB_1] or [M_ME_TE_1] 获得测量值，标度化值信息体集合
-    pub fn get_measured_value_scaled(&mut self) -> Result<Vec<MeasuredValueScaledInfo>> {
+    pub fn get_measured_value_scaled(&mut self) -> Result<Vec<MeasuredValueScaledInfo>, Error> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
@@ -1179,7 +1179,7 @@ impl Asdu {
     }
 
     // [M_ME_NC_1], [M_ME_TC_1] or [M_ME_TF_1]. 获得测量值,短浮点数信息体集合
-    pub fn get_measured_value_float(&mut self) -> Result<Vec<MeasuredValueFloatInfo>> {
+    pub fn get_measured_value_float(&mut self) -> Result<Vec<MeasuredValueFloatInfo>, Error> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
@@ -1211,7 +1211,7 @@ impl Asdu {
     }
 
     // [M_IT_NA_1], [M_IT_TA_1] or [M_IT_TB_1]. 获得累计量信息体集合
-    pub fn get_integrated_totals(&mut self) -> Result<Vec<BinaryCounterReadingInfo>> {
+    pub fn get_integrated_totals(&mut self) -> Result<Vec<BinaryCounterReadingInfo>, Error> {
         let mut rdr = Cursor::new(&self.raw);
         let info_num = self.identifier.variable_struct.number().get().value() as usize;
         let is_seq = self.identifier.variable_struct.is_sequence().get().value() != 0;
