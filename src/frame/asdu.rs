@@ -1,4 +1,7 @@
-use std::io::Cursor;
+use std::{
+    fmt::{Debug, Display},
+    io::Cursor,
+};
 
 use anyhow::{anyhow, Result};
 use bit_struct::*;
@@ -38,6 +41,23 @@ pub struct Asdu {
     pub raw: Bytes,
 }
 
+impl Display for Asdu {
+    // 展示成十六进制字符串 [F1][F2][F3]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.identifier.to_string().as_str())?;
+        f.write_str(
+            self.raw
+                .to_vec()
+                .iter()
+                .map(|b| format!("[{:02X}]", b))
+                .collect::<Vec<String>>()
+                .join("")
+                .as_str(),
+        )?;
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Identifier {
     pub type_id: TypeID,
@@ -49,13 +69,18 @@ pub struct Identifier {
     pub common_addr: CommonAddr,
 }
 
-// #[derive(Debug)]
-// #[allow(dead_code)]
-// pub enum Obj {
-//     SinglePoint(Vec<SinglePointInfo>),
-//     DoublePoint(Vec<DoublePointInfo>),
-//     MeasuredValueNormal(Vec<MeasuredValueNormalInfo>),
-// }
+impl Display for Identifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("[{:02X}]", self.type_id as u8))?;
+        f.write_fmt(format_args!("[{:02X}]", self.variable_struct.raw()))?;
+        f.write_fmt(format_args!("[{:02X}]", self.cot.raw()))?;
+        f.write_fmt(format_args!("[{:02X}]", self.orig_addr))?;
+        let common_addr = self.common_addr.to_le_bytes();
+        f.write_fmt(format_args!("[{:02X}]", common_addr[0]))?;
+        f.write_fmt(format_args!("[{:02X}]", common_addr[1]))?;
+        Ok(())
+    }
+}
 
 bit_struct! {
     pub struct VariableStruct(u8) {

@@ -356,7 +356,8 @@ where
                                     }
                                     let apdu = new_iframe(asdu, send_sn, rcv_sn);
                                     if let ApciKind::I(iapci) = ApciKind::from(apdu.apci) {
-                                        log::debug!("[TX] I-frame {:?} {:?}", iapci, apdu.asdu);
+                                        log::debug!("[TX] I-frame: {apdu}");
+                                        log::trace!("[TX] I-frame: {:?} {:?}", iapci, apdu.asdu);
                                         if let Err(e) = framed.send(apdu).await {
                                             break 'outer
                                         };
@@ -376,14 +377,16 @@ where
 
                                     }
                                     let apdu = new_uframe(uapci.function);
-                                    log::debug!("[TX] U-frame {:?}", uapci);
+                                    log::debug!("[TX] U-frame: {apdu}");
+                                    log::trace!("[TX] U-frame: {:?}", uapci);
                                     if let Err(e) = framed.send(apdu).await {
                                         break 'outer
                                     }
                                 }
                                 Request::S(sapci) => {
                                     let apdu = new_sframe(sapci.rcv_sn);
-                                    log::debug!("[TX] S-frame {:?}", sapci);
+                                    log::debug!("[TX] S-frame: {apdu}");
+                                    log::trace!("[TX] S-frame: {:?}", sapci);
                                     if let Err(e) = framed.send(apdu).await {
                                         break 'outer
                                     }
@@ -402,7 +405,8 @@ where
                             let kind = apdu.apci.into();
                             match kind {
                                 ApciKind::I(iapci) => {
-                                    log::debug!("[RX] I-frame: {iapci:#?} {:#?}", apdu.asdu);
+                                    log::debug!("[RX] I-frame: {apdu}");
+                                    log::trace!("[RX] I-frame: {iapci:#?} {:#?}", apdu.asdu);
 
                                     if !update_ack_no_out(iapci.rcv_sn, &mut ack_sendsn, &mut send_sn, &mut pending) ||
                                         iapci.send_sn != rcv_sn {
@@ -437,7 +441,8 @@ where
                                     rcv_sn = (iapci.send_sn + 1) % 32767;
                                 }
                                 ApciKind::U(uapci) => {
-                                    log::debug!("[RX] U-frame: {uapci:#?}");
+                                    log::debug!("[RX] U-frame: {apdu}");
+                                    log::trace!("[RX] U-frame: {uapci:#?}");
                                     match uapci.function {
                                         U_STARTDT_CONFIRM => {
                                             start_dt_active_send_since = DateTime::<Utc>::MAX_UTC;
@@ -462,7 +467,8 @@ where
                                     }
                                 }
                                 ApciKind::S(sapci) => {
-                                    log::debug!("[RX] S-frame: {sapci:#?}");
+                                    log::debug!("[RX] S-frame: {apdu}");
+                                    log::trace!("[RX] S-frame: {sapci:#?}");
                                     if !update_ack_no_out(sapci.rcv_sn, &mut ack_sendsn, &mut send_sn, &mut pending) {
                                         log::error!("fatal incoming acknowledge either earlier than previous or later than sendTime {:?} rcv_sn:{}", sapci,rcv_sn);
                                         break 'outer

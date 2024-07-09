@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, fmt::Display};
 
 use crate::{asdu::IDENTIFIER_SIZE, client::SeqPending};
 
@@ -35,6 +35,18 @@ pub struct Apci {
     pub ctrl2: u8,
     pub ctrl3: u8,
     pub ctrl4: u8,
+}
+
+impl Display for Apci {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("[{:02X}]", self.start))?;
+        f.write_fmt(format_args!("[{:02X}]", self.apdu_length))?;
+        f.write_fmt(format_args!("[{:02X}]", self.ctrl1))?;
+        f.write_fmt(format_args!("[{:02X}]", self.ctrl2))?;
+        f.write_fmt(format_args!("[{:02X}]", self.ctrl3))?;
+        f.write_fmt(format_args!("[{:02X}]", self.ctrl4))?;
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
