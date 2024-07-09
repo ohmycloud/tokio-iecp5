@@ -82,7 +82,7 @@ pub struct MeasuredValueScaledInfo {
     pub time: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct MeasuredValueFloatInfo {
     pub ioa: InfoObjAddr,
     pub r: f32,
@@ -1392,6 +1392,86 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn decode_measured_value_float() -> Result<()> {
+        struct Test {
+            name: String,
+            asdu: Asdu,
+            want: Vec<MeasuredValueFloatInfo>,
+        }
+
+        let r1 = 100_f32.to_le_bytes();
+        let r2 = 101_f32.to_le_bytes();
+
+        let mut tests = Vec::new();
+        tests.push(Test {
+            name: "M_ME_NC_1 seq = false Number = 2".into(),
+            asdu: Asdu {
+                identifier: Identifier {
+                    type_id: TypeID::M_ME_NC_1,
+                    variable_struct: VariableStruct::try_from(0x02).unwrap(),
+                    cot: CauseOfTransmission::try_from(0).unwrap(),
+                    orig_addr: 0,
+                    common_addr: 0,
+                },
+                raw: Bytes::from_iter([
+                    0x01, 0x00, 0x00, r1[0], r1[1], r1[2], r1[3], 0x10, 0x02, 0x00, 0x00, r2[0],
+                    r2[1], r2[2], r2[3], 0x10,
+                ]),
+            },
+            want: vec![
+                MeasuredValueFloatInfo {
+                    ioa: InfoObjAddr::try_from(u24!(0x01)).unwrap(),
+                    r: 100.0,
+                    qds: ObjectQDS::new(false, false, false, true, u3!(0), false),
+                    time: None,
+                },
+                MeasuredValueFloatInfo {
+                    ioa: InfoObjAddr::try_from(u24!(0x02)).unwrap(),
+                    r: 101.0,
+                    qds: ObjectQDS::new(false, false, false, true, u3!(0), false),
+                    time: None,
+                },
+            ],
+        });
+        tests.push(Test {
+            name: "M_ME_NC_1 seq = true Number = 2".into(),
+            asdu: Asdu {
+                identifier: Identifier {
+                    type_id: TypeID::M_ME_NC_1,
+                    variable_struct: VariableStruct::try_from(0x82).unwrap(),
+                    cot: CauseOfTransmission::try_from(0).unwrap(),
+                    orig_addr: 0,
+                    common_addr: 0,
+                },
+                raw: Bytes::from_iter([
+                    0x01, 0x00, 0x00, r1[0], r1[1], r1[2], r1[3], 0x10, r2[0], r2[1], r2[2], r2[3],
+                    0x10,
+                ]),
+            },
+            want: vec![
+                MeasuredValueFloatInfo {
+                    ioa: InfoObjAddr::try_from(u24!(0x01)).unwrap(),
+                    r: 100.0,
+                    qds: ObjectQDS::new(false, false, false, true, u3!(0), false),
+                    time: None,
+                },
+                MeasuredValueFloatInfo {
+                    ioa: InfoObjAddr::try_from(u24!(0x02)).unwrap(),
+                    r: 101.0,
+                    qds: ObjectQDS::new(false, false, false, true, u3!(0), false),
+                    time: None,
+                },
+            ],
+        });
+        for mut t in tests {
+            let result = t.asdu.get_measured_value_float()?;
+            assert_eq!(result, t.want);
+        }
+        Ok(())
+    }
+
+    #[test]
     fn test_single() -> Result<()> {
         struct Args {
             is_sequence: bool,

@@ -42,7 +42,6 @@ pub struct Asdu {
 }
 
 impl Display for Asdu {
-    // 展示成十六进制字符串 [F1][F2][F3]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.identifier.to_string().as_str())?;
         f.write_str(
