@@ -59,10 +59,13 @@ impl Display for Asdu {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Identifier {
+    /// 类型标识
     pub type_id: TypeID,
+    /// 可变结构
     pub variable_struct: VariableStruct,
+    /// 传输原因
     pub cot: CauseOfTransmission,
-    // (一般不使用, 置0)
+    // 源站址(一般不使用, 置0)
     pub orig_addr: OriginAddr,
     // (1~254为站地址, 255为全局地址, 0不使用)
     pub common_addr: CommonAddr,
@@ -90,54 +93,54 @@ bit_struct! {
 
 enums! {
     pub Cause {
-        Unused,
-        Periodic,
-        Background,
-        Spontaneous,
-        Initialized,
-        Request,
-        Activation,
-        ActivationCon,
-        Deactivation,
-        DeactivationCon,
-        ActivationTerm,
-        ReturnInfoRemote,
-        ReturnInfoLocal,
-        FileTransfer,
-        Authentication,
-        SessionKey,
-        UserRoleAndUpdateKey,
-        Reserved1,
-        Reserved2,
-        Reserved3,
-        InterrogatedByStation,
-        InterrogatedByGroup1,
-        InterrogatedByGroup2,
-        InterrogatedByGroup3,
-        InterrogatedByGroup4,
-        InterrogatedByGroup5,
-        InterrogatedByGroup6,
-        InterrogatedByGroup7,
-        InterrogatedByGroup8,
-        InterrogatedByGroup9,
-        InterrogatedByGroup10,
-        InterrogatedByGroup11,
-        InterrogatedByGroup12,
-        InterrogatedByGroup13,
-        InterrogatedByGroup14,
-        InterrogatedByGroup15,
-        InterrogatedByGroup16,
-        RequestByGeneralCounter,
-        RequestByGroup1Counter,
-        RequestByGroup2Counter,
-        RequestByGroup3Counter,
-        RequestByGroup4Counter,
-        Reserved4,
-        Reserved5,
-        UnknownTypeID,
-        UnknownCOT,
-        UnknownCA,
-        UnknownIOA,
+        Unused,                     // 未使用
+        Periodic,                   // 周期性
+        Background,                 // 背景扫描
+        Spontaneous,                // 自发的
+        Initialized,                // 初始化
+        Request,                    // 请求
+        Activation,                 // 激活
+        ActivationCon,              // 激活确认
+        Deactivation,               // 停用
+        DeactivationCon,            // 停用确认
+        ActivationTerm,             // 激活终止
+        ReturnInfoRemote,           // 远程信息返回
+        ReturnInfoLocal,            // 本地信息返回
+        FileTransfer,               // 文件传输
+        Authentication,             // 认证
+        SessionKey,                 // 会话密钥
+        UserRoleAndUpdateKey,       // 用户角色和更新密钥
+        Reserved1,                  // 保留1
+        Reserved2,                  // 保留2
+        Reserved3,                  // 保留3
+        InterrogatedByStation,      // 被站点询问
+        InterrogatedByGroup1,       // 被组1询问
+        InterrogatedByGroup2,       // 被组2询问
+        InterrogatedByGroup3,       // 被组3询问
+        InterrogatedByGroup4,       // 被组4询问
+        InterrogatedByGroup5,       // 被组5询问
+        InterrogatedByGroup6,       // 被组6询问
+        InterrogatedByGroup7,       // 被组7询问
+        InterrogatedByGroup8,       // 被组8询问
+        InterrogatedByGroup9,       // 被组9询问
+        InterrogatedByGroup10,      // 被组10询问
+        InterrogatedByGroup11,      // 被组11询问
+        InterrogatedByGroup12,      // 被组12询问
+        InterrogatedByGroup13,      // 被组13询问
+        InterrogatedByGroup14,      // 被组14询问
+        InterrogatedByGroup15,      // 被组15询问
+        InterrogatedByGroup16,      // 被组16询问
+        RequestByGeneralCounter,    // 通过通用计数器请求
+        RequestByGroup1Counter,     // 通过组1计数器请求
+        RequestByGroup2Counter,     // 通过组2计数器请求
+        RequestByGroup3Counter,     // 通过组3计数器请求
+        RequestByGroup4Counter,     // 通过组4计数器请求
+        Reserved4,                  // 保留4
+        Reserved5,                  // 保留5
+        UnknownTypeID,              // 未知类型ID
+        UnknownCOT,                 // 未知传输原因
+        UnknownCA,                  // 未知公共地址
+        UnknownIOA,                 // 未知信息对象地址
     }
 }
 
@@ -152,54 +155,54 @@ bit_struct! {
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TypeID {
-    M_SP_NA_1 = 1,
-    M_SP_TA_1 = 2,
-    M_DP_NA_1 = 3,
-    M_DP_TA_1 = 4,
-    M_ST_NA_1 = 5,
-    M_ST_TA_1 = 6,
-    M_BO_NA_1 = 7,
-    M_BO_TA_1 = 8,
-    M_ME_NA_1 = 9,
-    M_ME_TA_1 = 10,
-    M_ME_NB_1 = 11,
-    M_ME_TB_1 = 12,
-    M_ME_NC_1 = 13,
-    M_ME_TC_1 = 14,
-    M_IT_NA_1 = 15,
-    M_IT_TA_1 = 16,
-    M_EP_TA_1 = 17,
-    M_EP_TB_1 = 18,
-    M_EP_TC_1 = 19,
-    M_PS_NA_1 = 20,
-    M_ME_ND_1 = 21,
-    M_SP_TB_1 = 30,
-    M_DP_TB_1 = 31,
-    M_ST_TB_1 = 32,
-    M_BO_TB_1 = 33,
-    M_ME_TD_1 = 34,
-    M_ME_TE_1 = 35,
-    M_ME_TF_1 = 36,
-    M_IT_TB_1 = 37,
-    M_EP_TD_1 = 38,
-    M_EP_TE_1 = 39,
-    M_EP_TF_1 = 40,
+    M_SP_NA_1 = 1,  // 单点信息
+    M_SP_TA_1 = 2,  // 带时标单点信息
+    M_DP_NA_1 = 3,  // 双点信息
+    M_DP_TA_1 = 4,  // 带时标双点信息
+    M_ST_NA_1 = 5,  // 步位置信息
+    M_ST_TA_1 = 6,  // 带时标步位置信息
+    M_BO_NA_1 = 7,  // 32 比特串
+    M_BO_TA_1 = 8,  // 带时标 32 比特串
+    M_ME_NA_1 = 9,  // 测量值, 归一化值
+    M_ME_TA_1 = 10, // 测量值, 带时标归一化值
+    M_ME_NB_1 = 11, // 测量值, 标度化值
+    M_ME_TB_1 = 12, // 测量值, 带时标标度化值
+    M_ME_NC_1 = 13, // 测量值, 短浮点数
+    M_ME_TC_1 = 14, // 测量值, 带时标短浮点数
+    M_IT_NA_1 = 15, // 累计量
+    M_IT_TA_1 = 16, // 带时标累计量
+    M_EP_TA_1 = 17, // 带时标继电保护装置事件
+    M_EP_TB_1 = 18, // 带时标继电保护装置成组启动事件
+    M_EP_TC_1 = 19, // 带时标继电保护装置成组输出电路信息
+    M_PS_NA_1 = 20, // 带状态检出的成组单点信息
+    M_ME_ND_1 = 21, // 不带品质描述的归一化测量值
+    M_SP_TB_1 = 30, // 带时标 CP56Time2a 的单点信息
+    M_DP_TB_1 = 31, // 带时标 CP56Time2a 的双点信息
+    M_ST_TB_1 = 32, // 带时标 CP56Time2a 的步位置信息
+    M_BO_TB_1 = 33, // 带时标 CP56Time2a 的 32 比特串
+    M_ME_TD_1 = 34, // 带时标 CP56Time2a 的测量值, 归一化值
+    M_ME_TE_1 = 35, // 带时标 CP56Time2a 的测量值, 标度化值
+    M_ME_TF_1 = 36, // 带时标 CP56Time2a 的测量值, 短浮点数
+    M_IT_TB_1 = 37, // 带时标 CP56Time2a 的累计量
+    M_EP_TD_1 = 38, // 带时标 CP56Time2a 的继电保护装置事件
+    M_EP_TE_1 = 39, // 带时标 CP56Time2a 的继电保护装置成组启动事件
+    M_EP_TF_1 = 40, // 带时标 CP56Time2a 的继电保护装置成组输出电路信息
     S_IT_TC_1 = 41,
-    C_SC_NA_1 = 45,
-    C_DC_NA_1 = 46,
-    C_RC_NA_1 = 47,
-    C_SE_NA_1 = 48,
-    C_SE_NB_1 = 49,
-    C_SE_NC_1 = 50,
-    C_BO_NA_1 = 51,
-    C_SC_TA_1 = 58,
-    C_DC_TA_1 = 59,
-    C_RC_TA_1 = 60,
-    C_SE_TA_1 = 61,
-    C_SE_TB_1 = 62,
-    C_SE_TC_1 = 63,
-    C_BO_TA_1 = 64,
-    M_EI_NA_1 = 70,
+    C_SC_NA_1 = 45, // 单命令
+    C_DC_NA_1 = 46, // 双命令
+    C_RC_NA_1 = 47, // 步调节命令
+    C_SE_NA_1 = 48, // 设点命令, 归一化值
+    C_SE_NB_1 = 49, // 设点命令, 标度化值
+    C_SE_NC_1 = 50, // 设点命令, 短浮点数
+    C_BO_NA_1 = 51, // 32 比特串
+    C_SC_TA_1 = 58, // 带时标 CP56Time2a 的单命令
+    C_DC_TA_1 = 59, // 带时标 CP56Time2a 的双命令
+    C_RC_TA_1 = 60, // 带时标 CP56Time2a 的步调节命令
+    C_SE_TA_1 = 61, // 带时标 CP56Time2a 的设点命令, 归一化值
+    C_SE_TB_1 = 62, // 带时标 CP56Time2a 的设点命令, 标度化值
+    C_SE_TC_1 = 63, // 带时标 CP56Time2a 的设点命令, 短浮点数
+    C_BO_TA_1 = 64, // 带时标 CP56Time2a 的 32 比特串
+    M_EI_NA_1 = 70, // 初始化结束
     S_CH_NA_1 = 81,
     S_RP_NA_1 = 82,
     S_AR_NA_1 = 83,
@@ -213,26 +216,26 @@ pub enum TypeID {
     S_UK_NA_1 = 93,
     S_UA_NA_1 = 94,
     S_UC_NA_1 = 95,
-    C_IC_NA_1 = 100,
-    C_CI_NA_1 = 101,
-    C_RD_NA_1 = 102,
-    C_CS_NA_1 = 103,
-    C_TS_NA_1 = 104,
-    C_RP_NA_1 = 105,
-    C_CD_NA_1 = 106,
-    C_TS_TA_1 = 107,
-    P_ME_NA_1 = 110,
-    P_ME_NB_1 = 111,
-    P_ME_NC_1 = 112,
-    P_AC_NA_1 = 113,
-    F_FR_NA_1 = 120,
-    F_SR_NA_1 = 121,
-    F_SC_NA_1 = 122,
-    F_LS_NA_1 = 123,
-    F_AF_NA_1 = 124,
-    F_SG_NA_1 = 125,
-    F_DR_TA_1 = 126,
-    F_SC_NB_1 = 127,
+    C_IC_NA_1 = 100, // 总召唤命令
+    C_CI_NA_1 = 101, // 电能脉冲召唤命令
+    C_RD_NA_1 = 102, // 读命令
+    C_CS_NA_1 = 103, // 时钟同步命令
+    C_TS_NA_1 = 104, // 测试命令
+    C_RP_NA_1 = 105, // 复位进程命令
+    C_CD_NA_1 = 106, // 延时获得命令
+    C_TS_TA_1 = 107, // 带时标 CP56Time2a 的测试命令
+    P_ME_NA_1 = 110, // 测量值参数, 归一化值
+    P_ME_NB_1 = 111, // 测量值参数, 标度值
+    P_ME_NC_1 = 112, // 测量值参数, 短浮点数
+    P_AC_NA_1 = 113, // 参数激活
+    F_FR_NA_1 = 120, // 文件已准备好
+    F_SR_NA_1 = 121, // 节已准备好
+    F_SC_NA_1 = 122, // 召唤目录, 选择文件, 召唤文件, 召唤节
+    F_LS_NA_1 = 123, // 最后的节, 最后的段
+    F_AF_NA_1 = 124, // 确认文件, 确认节
+    F_SG_NA_1 = 125, // 段
+    F_DR_TA_1 = 126, // 目录
+    F_SC_NB_1 = 127, // 日志查询-请求存档文件
 }
 
 impl TryFrom<u8> for TypeID {
