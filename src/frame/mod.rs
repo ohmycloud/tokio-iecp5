@@ -9,6 +9,7 @@ pub mod time;
 use self::{apci::Apci, asdu::Asdu};
 use std::fmt::Display;
 
+// APDU = APCI + 可选的 ASDU
 #[derive(Debug)]
 pub struct Apdu {
     pub apci: Apci,

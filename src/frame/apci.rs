@@ -29,11 +29,17 @@ pub const U_TESTFR_CONFIRM: u8 = 0x80; // 测试确认
 
 #[derive(Debug, Clone, Copy)]
 pub struct Apci {
+    /// 启动字符
     pub start: u8,
+    /// APDU 长度
     pub apdu_length: u8,
+    /// 控制域1
     pub ctrl1: u8,
+    /// 控制域2
     pub ctrl2: u8,
+    /// 控制域3
     pub ctrl3: u8,
+    /// 控制域4
     pub ctrl4: u8,
 }
 
@@ -51,7 +57,9 @@ impl Display for Apci {
 
 #[derive(Debug)]
 pub struct IApci {
+    /// 发送序列号
     pub send_sn: u16,
+    /// 接收序列号
     pub rcv_sn: u16,
 }
 
@@ -62,13 +70,15 @@ pub struct UApci {
 
 #[derive(Debug)]
 pub struct SApci {
+    /// 接收序列号
     pub rcv_sn: u16,
 }
 
+// 报文类型
 pub enum ApciKind {
-    I(IApci),
-    U(UApci),
-    S(SApci),
+    I(IApci), // I 帧
+    U(UApci), // U 帧
+    S(SApci), // S 帧
 }
 
 impl From<Apci> for ApciKind {

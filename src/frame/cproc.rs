@@ -19,8 +19,11 @@ use super::{
 // 单命令 信息体
 #[derive(Debug, PartialEq)]
 pub struct SingleCommandInfo {
+    /// 信息对象地址
     pub ioa: InfoObjAddr,
+    /// 信息对象元素
     pub sco: ObjectSCO,
+    /// 时标
     pub time: Option<DateTime<Utc>>,
 }
 
@@ -39,8 +42,11 @@ impl SingleCommandInfo {
 // 双命令 信息体
 #[derive(Debug, PartialEq)]
 pub struct DoubleCommandInfo {
+    /// 信息对象地址
     pub ioa: InfoObjAddr,
+    /// 信息对象元素
     pub dco: ObjectDCO,
+    /// 时标
     pub time: Option<DateTime<Utc>>,
 }
 
@@ -60,9 +66,12 @@ impl DoubleCommandInfo {
 // 设置命令，规一化值 信息体
 #[derive(Debug, PartialEq)]
 pub struct SetpointCommandNormalInfo {
+    /// 信息对象地址
     pub ioa: InfoObjAddr,
     pub nva: i16,
+    /// 限定词
     pub qos: ObjectQOS,
+    /// 时标
     pub time: Option<DateTime<Utc>>,
 }
 
@@ -82,9 +91,12 @@ impl SetpointCommandNormalInfo {
 // 设定命令,标度化值 信息体
 #[derive(Debug, PartialEq)]
 pub struct SetpointCommandScaledInfo {
+    /// 信息对象地址
     pub ioa: InfoObjAddr,
     pub sva: i16,
+    // 限定词
     pub qos: ObjectQOS,
+    /// 时标
     pub time: Option<DateTime<Utc>>,
 }
 
