@@ -75,7 +75,7 @@ impl Decoder for Codec {
 
                 Ok(Some(Apdu {
                     apci,
-                    asdu: Some(asdu.unwrap()),
+                    asdu: Some(asdu?),
                 }))
             }
             _ => Ok(Some(Apdu { apci, asdu: None })),
@@ -93,10 +93,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn decode_iapci() {
+    fn decode_iapci() -> Result<()> {
         let mut codec = Codec;
         let mut buf = BytesMut::from(&[START_FRAME, 0x04, 0x02, 0x00, 0x03, 0x00][..]);
-        let apdu = codec.decode(&mut buf).unwrap().unwrap();
+        let apdu = codec.decode(&mut buf)?.ok_or(anyhow!("decode failed"))?;
         let apci_kind = apdu.apci.into();
         match apci_kind {
             ApciKind::I(apci) => {
@@ -105,13 +105,14 @@ mod tests {
             }
             _ => panic!(),
         }
+        Ok(())
     }
 
     #[test]
-    fn decode_sapci() {
+    fn decode_sapci() -> Result<()> {
         let mut codec = Codec;
         let mut buf = BytesMut::from(&[START_FRAME, 0x04, 0x01, 0x00, 0x02, 0x00][..]);
-        let apdu = codec.decode(&mut buf).unwrap().unwrap();
+        let apdu = codec.decode(&mut buf)?.ok_or(anyhow!("decode failed"))?;
         let apci_kind = apdu.apci.into();
         match apci_kind {
             ApciKind::S(apci) => {
@@ -119,13 +120,14 @@ mod tests {
             }
             _ => panic!(),
         }
+        Ok(())
     }
 
     #[test]
-    fn decode_uapci() {
+    fn decode_uapci() -> Result<()> {
         let mut codec = Codec;
         let mut buf = BytesMut::from(&[START_FRAME, 0x04, 0x07, 0x00, 0x00, 0x00][..]);
-        let apdu = codec.decode(&mut buf).unwrap().unwrap();
+        let apdu = codec.decode(&mut buf)?.ok_or(anyhow!("decode failed"))?;
         let apci_kind = apdu.apci.into();
         match apci_kind {
             ApciKind::U(apci) => {
@@ -133,10 +135,11 @@ mod tests {
             }
             _ => panic!(),
         }
+        Ok(())
     }
 
     #[test]
-    fn encode_iapci() {
+    fn encode_iapci() -> Result<()> {
         let mut codec = Codec;
         let apdu = Apdu {
             apci: Apci {
@@ -182,7 +185,8 @@ mod tests {
         ];
 
         let mut buf = BytesMut::with_capacity(APDU_SIZE_MAX);
-        codec.encode(apdu, &mut buf).unwrap();
+        codec.encode(apdu, &mut buf)?;
         assert_eq!(buf.as_ref(), &want[..]);
+        Ok(())
     }
 }
