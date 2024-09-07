@@ -15,7 +15,6 @@ impl Encoder<Apdu> for Codec {
 
     fn encode(&mut self, apdu: Apdu, buf: &mut BytesMut) -> Result<()> {
         let apci = apdu.apci;
-        let asdu = apdu.asdu;
 
         buf.put_u8(apci.start);
         buf.put_u8(apci.apdu_length);
@@ -24,8 +23,8 @@ impl Encoder<Apdu> for Codec {
         buf.put_u8(apci.ctrl3);
         buf.put_u8(apci.ctrl4);
 
-        if asdu.is_some() {
-            let asdu_raw: Bytes = asdu.unwrap().try_into().unwrap();
+        if let Some(asdu) = apdu.asdu {
+            let asdu_raw: Bytes = asdu.try_into()?;
             buf.extend(asdu_raw);
         }
 
