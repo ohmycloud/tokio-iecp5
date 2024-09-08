@@ -154,9 +154,7 @@ impl ServerSession {
                         idle_timeout3_sine + Duration::from_millis(100) <= Utc::now()) {
                             tx.send(Request::S(SApci { rcv_sn  }))?;
                             ack_rcvsn = rcv_sn;
-
                         }
-
 
                     if idle_timeout3_sine + Duration::from_secs(20) <= Utc::now() {
                         log::debug!("[CHECK TIMER] test for active");
@@ -215,7 +213,7 @@ impl ServerSession {
                 apdu = framed.next() => match apdu {
                     Some(apdu) => {
                         let apdu = apdu?;
-                        idle_timeout3_sine = Utc::now(); // 每收到一个i帧,S帧,U帧, 重置空闲定时器 t3
+                        idle_timeout3_sine = Utc::now(); // 每收到一个 I 帧,S 帧,U 帧, 重置空闲定时器 t3
 
                         let kind = apdu.apci.into();
                         match kind {

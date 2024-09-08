@@ -377,7 +377,7 @@ async fn main() -> Result<(), Error> {
         println!("{:?}", client.read_siq(3));
         println!("{:?}", client.read_diq(655));
         println!("{:?}", client.read_diq(658));
-        client.start().await.unwrap();
+        client.start().await?;
         sleep(Duration::from_millis(500)).await;
         log::info!("main sleeping...");
     }

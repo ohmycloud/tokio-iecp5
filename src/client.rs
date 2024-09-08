@@ -151,7 +151,7 @@ where
         .await
     }
 
-    pub async fn send_stop_dt(&self) -> anyhow::Result<(), Error> {
+    pub async fn send_stop_dt(&self) -> Result<(), Error> {
         if !self.is_connected().await {
             return Err(Error::ErrUseClosedConnection);
         }
