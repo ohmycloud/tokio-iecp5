@@ -63,7 +63,7 @@ pub struct Identifier {
     pub type_id: TypeID,
     /// 可变结构
     pub variable_struct: VariableStruct,
-    /// 传输原因
+    /// 传送原因
     pub cot: CauseOfTransmission,
     // 源站址(一般不使用, 置0)
     pub orig_addr: OriginAddr,
@@ -93,20 +93,20 @@ bit_struct! {
 
 enums! {
     pub Cause {
-        Unused,                     // 未使用
-        Periodic,                   // 周期性
-        Background,                 // 背景扫描
-        Spontaneous,                // 自发的
-        Initialized,                // 初始化
-        Request,                    // 请求
-        Activation,                 // 激活
-        ActivationCon,              // 激活确认
-        Deactivation,               // 停用
-        DeactivationCon,            // 停用确认
-        ActivationTerm,             // 激活终止
+        Unused,                     // 未用
+        Periodic,                   // 周期、循环 （遥测）
+        Background,                 // 背景扫描（遥信）（遥测）
+        Spontaneous,                // 突发(自发) （遥信）（遥测）
+        Initialized,                // 初始化完成
+        Request,                    // 请求或被请求 （遥信被请求）（遥测被请求）
+        Activation,                 // 激活（激活）（遥控、参数设置 控制方向）
+        ActivationCon,              // 激活确认（激活确认）（遥控、参数设置 监视方向）
+        Deactivation,               // 停止激活 （遥控、参数设置 控制方向）
+        DeactivationCon,            // 停止激活确认（遥控、参数设置 监视方向）
+        ActivationTerm,             // 激活终止 （遥控 监视方向）
+        FileTransfer,               // 文件传输
         ReturnInfoRemote,           // 远程信息返回
         ReturnInfoLocal,            // 本地信息返回
-        FileTransfer,               // 文件传输
         Authentication,             // 认证
         SessionKey,                 // 会话密钥
         UserRoleAndUpdateKey,       // 用户角色和更新密钥
@@ -137,17 +137,20 @@ enums! {
         RequestByGroup4Counter,     // 通过组4计数器请求
         Reserved4,                  // 保留4
         Reserved5,                  // 保留5
-        UnknownTypeID,              // 未知类型ID
-        UnknownCOT,                 // 未知传输原因
-        UnknownCA,                  // 未知公共地址
-        UnknownIOA,                 // 未知信息对象地址
+        UnknownTypeID,              // 未知的类型标识（遥控、参数设置 监视方向）
+        UnknownCOT,                 // 未知的传送原因（遥控、参数设置 监视方向）
+        UnknownCA,                  // 未知的应用服务数据单元公共地址（遥控、参数设置 监视方向）
+        UnknownIOA,                 // 未知的信息对象地址（遥控、参数设置 监视方向）
     }
 }
 
 bit_struct! {
     pub struct CauseOfTransmission(u8) {
+        /// T(test) true: 实验, false: 未实验
         test: bool,
+        /// P/N true: 否定确认, false: 肯定确认
         positive: bool,
+        /// 传送原因
         cause: Cause,
     }
 }
@@ -354,10 +357,19 @@ impl Asdu {
     }
 }
 
+// 尝试把 Bytes 转换为 Asdu
 impl TryFrom<Bytes> for Asdu {
     type Error = anyhow::Error;
 
     fn try_from(bytes: Bytes) -> Result<Self> {
+        // Cursor 是一个用于在字节流中进行读取和写入的结构体
+        // 提供游标功能：Cursor 允许你在字节数组中移动读取位置。
+        // 可以通过 Cursor 的方法（如 read_u8()、read_u16() 等）逐个读取字节，
+        // 并自动管理当前读取位置。
+        // 简化读取操作：使用 Cursor 可以方便地从字节流中读取不同类型的数据，
+        // 而不需要手动管理字节的索引。
+        // 支持多种读取方法：Cursor 实现了 Read trait，因此可以与标准库中的各种读取方法兼容，
+        // 允许你使用多种方式读取数据。
         let mut rdr = Cursor::new(&bytes);
         let type_id = TypeID::try_from(rdr.read_u8()?)?;
         let variable_struct = VariableStruct::try_from(rdr.read_u8()?).unwrap();
@@ -378,6 +390,7 @@ impl TryFrom<Bytes> for Asdu {
     }
 }
 
+// 尝试把 Asdu 转换为 Bytes
 impl TryInto<Bytes> for Asdu {
     type Error = anyhow::Error;
 
