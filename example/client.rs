@@ -28,6 +28,7 @@ enum IEC104DateType {
 }
 
 pub struct IEC104Client {
+    /// 应用服务数据单元公共地址
     remote_addr: CommonAddr,
     // TODO: change to mutex
     client: Arc<Client<Arc<IEC104ClientHandler>>>,

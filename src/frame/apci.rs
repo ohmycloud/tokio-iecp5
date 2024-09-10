@@ -14,8 +14,11 @@ pub const START_FRAME: u8 = 0x68; // 启动字符
 //      | start | APDU length | control field |       ASDU         |
 //                       |          APDU field size(253)           |
 // bytes|    1  |    1   |        4           |                    |
+// APCI 占 6 个字节
 pub const APCI_FIELD_SIZE: usize = 6;
+// APCI 中, 控制域占 4 个字节
 pub const APCICTL_FIELD_SIZE: usize = 4;
+// APDU 最大长度
 pub const APDU_SIZE_MAX: usize = 255;
 pub const APDU_FIELD_SIZE_MAX: usize = APCICTL_FIELD_SIZE + ASDU_SIZE_MAX;
 
@@ -33,13 +36,13 @@ pub struct Apci {
     pub start: u8,
     /// APDU 长度
     pub apdu_length: u8,
-    /// 控制域1
+    /// 八位位组1
     pub ctrl1: u8,
-    /// 控制域2
+    /// 八位位组2
     pub ctrl2: u8,
-    /// 控制域3
+    /// 八位位组3
     pub ctrl3: u8,
-    /// 控制域4
+    /// 八位位组4
     pub ctrl4: u8,
 }
 
@@ -55,6 +58,7 @@ impl Display for Apci {
     }
 }
 
+// I 帧 APCI 数据
 #[derive(Debug)]
 pub struct IApci {
     /// 发送序列号
@@ -63,11 +67,13 @@ pub struct IApci {
     pub rcv_sn: u16,
 }
 
+// U 帧 APCI 数据
 #[derive(Debug)]
 pub struct UApci {
     pub function: u8,
 }
 
+// S 帧 APCI 数据
 #[derive(Debug)]
 pub struct SApci {
     /// 接收序列号
@@ -81,6 +87,7 @@ pub enum ApciKind {
     S(SApci), // S 帧
 }
 
+// 尝试把 Apci 转换为 ApciKind
 impl From<Apci> for ApciKind {
     fn from(apci: Apci) -> Self {
         if apci.ctrl1 & 0x01 == 0 {
