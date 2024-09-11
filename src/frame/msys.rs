@@ -13,7 +13,7 @@ use super::asdu::{
 
 // 在监视方向系统信息的应用服务数据单元
 
-// 初始化原因
+// COI -Cause of Initialization(初始化原因)
 bit_struct! {
     pub struct ObjectCOI(u8) {
         cause: u7, // 0: 电源上电, 1:手动复位, 2:远方复位

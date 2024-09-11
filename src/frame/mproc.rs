@@ -97,7 +97,7 @@ pub struct BinaryCounterReadingInfo {
     pub time: Option<DateTime<Utc>>,
 }
 
-// 单点遥信对象
+// SIQ - Single-point Information with Quality descriptor(带品质描述词的单点信息) 单点遥信对象
 bit_struct! {
     pub struct ObjectSIQ(u8) {
         invalid: bool,  // 数据无效标志
@@ -116,19 +116,19 @@ impl ObjectSIQ {
     }
 }
 
-// 双点遥信对象
+// DIQ - Double-point Information with Quality descriptor(带品质描述词的双点信息) 双点遥信对象
 bit_struct! {
     pub struct ObjectDIQ(u8) {
-        invalid: bool,    // 数据无效标志
-        nt: bool,         // 非最新状态
-        sb: bool,         // 被取代/人工设置
-        bl: bool,         // 封锁 blocking
-        res: u2,        // 保留, 置0
-        spi: u2,        // 遥信状态
+        invalid: bool, // 数据无效标志
+        nt: bool,      // 非最新状态
+        sb: bool,      // 被取代/人工设置
+        bl: bool,      // 封锁 blocking
+        res: u2,       // 保留, 置0
+        spi: u2,       // 遥信状态
     }
 }
 
-// 信息对象品质描述词
+// QDS - Quality Descriptor(品质描述词) 信息对象品质描述词
 bit_struct! {
     pub struct ObjectQDS(u8) {
         invalid: bool,     // 数据无效标志
@@ -139,10 +139,9 @@ bit_struct! {
         ov: bool,         // 溢出 overflow
 
     }
-
 }
 
-// 带变位检索的遥信对象
+// SCD - Status and Change Detection(状态和变位检测) 带变位检索的遥信对象
 bit_struct! {
     pub struct ObjectSCD(u40) {
         res: u8,     // 保留, 置0
@@ -151,7 +150,7 @@ bit_struct! {
     }
 }
 
-// 二进制计数器遥测对象
+// BCR - Binary Counter Reading(二进制计数器读数) 二进制计数器遥测对象
 #[derive(Debug)]
 pub struct ObjectBCR {
     pub invalid: bool, // 数据无效标志

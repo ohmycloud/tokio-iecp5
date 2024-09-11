@@ -152,7 +152,8 @@ impl BitsString32CommandInfo {
     }
 }
 
-// 单命令 遥控信息
+// SCO - Single Command Output(单点命令输出) 遥控信息
+// 用于发送单点控制命令，通常用于控制只有两个状态的设备
 bit_struct! {
     pub struct ObjectSCO(u8) {
         scs: bool,  // 控制状态
@@ -162,7 +163,7 @@ bit_struct! {
     }
 }
 
-// 双命令 遥控信息 Double Command Output(双点命令输出)
+// DCO - Double Command Output(双点命令输出) 遥控信息
 bit_struct! {
     pub struct ObjectDCO(u8) {
         /// 控制状态
@@ -174,7 +175,7 @@ bit_struct! {
     }
 }
 
-// Qualifier of Command(命令限定词)
+// QOC - Qualifier of Command(命令限定词)
 bit_struct! {
     pub struct ObjectQOC(u8) {
         /// 预留：置0
@@ -186,7 +187,7 @@ bit_struct! {
     }
 }
 
-// Qualifier of Set-point Command(设定点命令限定词)
+// QOS - Qualifier of Set-point Command(设定点命令限定词)
 bit_struct! {
     pub struct ObjectQOS(u8) {
         /// 0: 默认 1-63: 预留为标准定义 64-127:特殊使用

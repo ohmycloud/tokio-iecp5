@@ -86,7 +86,9 @@ impl Display for Identifier {
 
 bit_struct! {
     pub struct VariableStruct(u8) {
+        /// 是否顺序
         is_sequence: u1,
+        /// 信息元素个数
         number: u7,
     }
 }
