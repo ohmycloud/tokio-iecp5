@@ -23,21 +23,21 @@ const FBPTEST_WORD: u16 = 0x55aa;
 
 pub type QualifierOfResetProcessCmd = u8;
 
-// 数据召唤限定词
+// QOI - Qualifier of Interrogation(召唤限定词)
 bit_struct! {
     pub struct ObjectQOI(u8) {
         range: u8,   // 范围: 0~19:保留, 20:全站, 21~36:第1~16组, 37~255:保留
     }
 }
 
-// QCC: 累计召回限定词
+// QCC - Qualifier of Counter Interrogation Command(计数器召唤命令限定词)
 bit_struct! {
     pub struct ObjectQCC(u8) {
         qcc: u8,
     }
 }
 
-// 复位进程命令限定词
+// QRP - Qualifier of Reset Process Command(复位进程命令限定词)
 bit_struct! {
     pub struct ObjectQRP(u8) {
         qrp: u8,     // 0:保留, 1:进程复位, 2:复位事件缓冲

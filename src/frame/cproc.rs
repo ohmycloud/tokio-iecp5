@@ -162,7 +162,7 @@ bit_struct! {
     }
 }
 
-// 双命令 遥控信息
+// 双命令 遥控信息 Double Command Output(双点命令输出)
 bit_struct! {
     pub struct ObjectDCO(u8) {
         /// 控制状态
@@ -174,7 +174,7 @@ bit_struct! {
     }
 }
 
-// 命令限定词
+// Qualifier of Command(命令限定词)
 bit_struct! {
     pub struct ObjectQOC(u8) {
         /// 预留：置0
@@ -186,7 +186,7 @@ bit_struct! {
     }
 }
 
-// 设定命令限定词
+// Qualifier of Set-point Command(设定点命令限定词)
 bit_struct! {
     pub struct ObjectQOS(u8) {
         /// 0: 默认 1-63: 预留为标准定义 64-127:特殊使用
