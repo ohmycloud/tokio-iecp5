@@ -153,15 +153,17 @@ mod tests {
             asdu: Some(Asdu {
                 identifier: Identifier {
                     type_id: TypeID::M_SP_NA_1,
-                    variable_struct: VariableStruct::try_from(0x02).unwrap(),
-                    cot: CauseOfTransmission::try_from(0x06).unwrap(),
+                    variable_struct: VariableStruct::try_from(0x02)
+                        .map_err(|_| anyhow!("failed convert into variable struct"))?,
+                    cot: CauseOfTransmission::try_from(0x06)
+                        .map_err(|_| anyhow!("failed convert into cause of transmission"))?,
                     orig_addr: 0,
                     common_addr: 0,
                 },
                 raw: Bytes::from_static(&[0x01, 0x00, 0x00, 0x11, 0x02, 0x00, 0x00, 0x10]),
             }),
         };
-        let want = [
+        let expected = [
             START_FRAME,
             0x04 + IDENTIFIER_SIZE as u8 + 8,
             0x02,
@@ -186,7 +188,7 @@ mod tests {
 
         let mut buf = BytesMut::with_capacity(APDU_SIZE_MAX);
         codec.encode(apdu, &mut buf)?;
-        assert_eq!(buf.as_ref(), &want[..]);
+        assert_eq!(buf.as_ref(), &expected[..]);
         Ok(())
     }
 }
