@@ -373,12 +373,20 @@ impl TryFrom<Bytes> for Asdu {
         // 支持多种读取方法：Cursor 实现了 Read trait，因此可以与标准库中的各种读取方法兼容，
         // 允许你使用多种方式读取数据。
         let mut rdr = Cursor::new(&bytes);
+        // 尝试把 u8 转换为 TypeID
         let type_id = TypeID::try_from(rdr.read_u8()?)?;
-        let variable_struct = VariableStruct::try_from(rdr.read_u8()?).unwrap();
-        let cot = CauseOfTransmission::try_from(rdr.read_u8()?).unwrap();
+        // 尝试把 u8 转换为 VariableStruct
+        let variable_struct = VariableStruct::try_from(rdr.read_u8()?)
+            .map_err(|_| anyhow!("Failed to parse variable struct"))?;
+        // 尝试把 u8 转换为 CauseOfTransmission
+        let cot = CauseOfTransmission::try_from(rdr.read_u8()?)
+            .map_err(|_| anyhow!("Failed to parse cot struct"))?;
+        // 尝试读取一个 u8
         let orig_addr = rdr.read_u8()?;
+        // 尝试读取一个 u16
         let common_addr = rdr.read_u16::<byteorder::LittleEndian>()?;
         let mut bytes = bytes;
+
         Ok(Asdu {
             identifier: Identifier {
                 type_id,
@@ -398,6 +406,7 @@ impl TryInto<Bytes> for Asdu {
 
     fn try_into(self) -> Result<Bytes, Self::Error> {
         let mut buf = BytesMut::with_capacity(ASDU_SIZE_MAX);
+
         buf.put_u8(self.identifier.type_id as u8);
         buf.put_u8(self.identifier.variable_struct.raw());
         buf.put_u8(self.identifier.cot.raw());
@@ -425,7 +434,7 @@ mod tests {
         assert_eq!(asdu.identifier.common_addr, 0x80);
         assert_eq!(asdu.raw, Bytes::from_static(&[0x00, 0x01, 0x02, 0x03]));
 
-        let raw: Bytes = asdu.try_into().unwrap();
+        let raw: Bytes = asdu.try_into()?;
         assert_eq!(bytes, raw);
         Ok(())
     }
