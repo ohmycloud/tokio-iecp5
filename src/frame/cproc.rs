@@ -39,7 +39,7 @@ impl SingleCommandInfo {
     }
 }
 
-// 双命令 信息体
+// 双命令
 #[derive(Debug, PartialEq)]
 pub struct DoubleCommandInfo {
     /// 信息对象地址
@@ -63,13 +63,14 @@ impl DoubleCommandInfo {
     }
 }
 
-// 设置命令，规一化值 信息体
+// 设定命令, 规一化值
 #[derive(Debug, PartialEq)]
 pub struct SetpointCommandNormalInfo {
     /// 信息对象地址
     pub ioa: InfoObjAddr,
+    /// 信息对象值(归一化值)
     pub nva: i16,
-    /// 限定词
+    /// 设定点命令限定词
     pub qos: ObjectQOS,
     /// 时标
     pub time: Option<DateTime<Utc>>,
@@ -88,13 +89,38 @@ impl SetpointCommandNormalInfo {
     }
 }
 
-// 设定命令,标度化值 信息体
+// 设定命令, 标度化值
+// C_SE_NB_1 := CP{数据单元标识符, 信息对象地址, SVA, QOS}
+// 设定命令, 标度化值
+// 单个信息对象 (SQ = 0)
+// | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 1 | 类型标识 (TYP)                                      |
+// | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 可变结构限定词 (VSQ)                                 |
+// | 在 DL/T 634.5101 7.2.3 中定义  | 传送原因 (COT)                                      |
+// | 在 DL/T 634.5101 7.2.4 中定义  | 应用服务数据单元公共地址                               |
+// | 在 DL/T 634.5101 7.2.5 中定义  | 信息对象地址                                         |
+// |           Value               | SVA=标度化值 (在 DL/T 634.5101 7.2.6.7 中定义)       |
+// | S |       Value               |                                                   |
+// |S/E|       QL                  | QOS=设定命令限定词 (在 DL/T 634.5101 7.2.6.39 中定义) |
+
+// C_SE_TB_1 := CP{数据单元标识符, 信息对象地址, SVA, QOS, CP56Time2a}
+// 带时标 CP56Time2a 的设定值命令, 标度化值
+// 单个信息对象 (SQ = 0)
+// | 0 | 0 | 1 | 1 | 1 | 1 | 1 | 0 | 类型标识 (TYP)                                         |
+// | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 可变结构限定词 (VSQ)                                    |
+// | 在 DL/T 634.5101 7.2.3 中定义  | 传送原因 (COT)                                         |
+// | 在 DL/T 634.5101 7.2.4 中定义  | 应用服务数据单元公共地址                                  |
+// | 在 DL/T 634.5101 7.2.5 中定义  | 信息对象地址                                            |
+// |   |          Value            | SVA=标度化值 (在 DL/T 634.5101 7.2.6.7 中定义)          |
+// | S |          Value            |                                                      |
+// |S/E|          QL               | QOS=设定命令品质限定词 (在 DL/T 634.5101 7.2.6.39 中定义) |
+// |    CP56Time2a (在 DL/T 634.5101 7.2.6.18 中定义) | 7 个八位位组的二进制时间               |
 #[derive(Debug, PartialEq)]
 pub struct SetpointCommandScaledInfo {
     /// 信息对象地址
     pub ioa: InfoObjAddr,
+    /// 标度化值
     pub sva: i16,
-    // 限定词
+    // 设定命令限定词
     pub qos: ObjectQOS,
     /// 时标
     pub time: Option<DateTime<Utc>>,
@@ -113,7 +139,7 @@ impl SetpointCommandScaledInfo {
     }
 }
 
-// 设定命令, 短浮点数 信息体
+// 设定命令, 短浮点数
 pub struct SetpointCommandFloatInfo {
     pub ioa: InfoObjAddr,
     pub r: f32,
@@ -134,7 +160,7 @@ impl SetpointCommandFloatInfo {
     }
 }
 
-// 比特串命令 信息体
+// 比特串命令
 pub struct BitsString32CommandInfo {
     pub ioa: InfoObjAddr,
     pub bcr: i32,
@@ -241,7 +267,7 @@ bit_struct! {
     }
 }
 
-// QOS - Qualifier of Set-point Command(设定点命令限定词)
+// QOS - Qualifier of Set-point Command(设定命令限定词)
 // | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 类型标识(TYP)                      |
 // | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 可变结构限定词(VSQ)                 |
 // | 在 7.2.3 中定义                | 传送原因(COT)                      |
