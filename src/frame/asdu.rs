@@ -343,7 +343,7 @@ impl TryFrom<u8> for TypeID {
 // 信息对象地址 (IEC104)
 bit_struct! {
     pub struct InfoObjAddr(u24) {
-        res: u8,       // 未使用, 置0
+        res: u8,       // 未使用, 置 0
         addr: u16,     // 有效取值 [1, 65534]
     }
 }
