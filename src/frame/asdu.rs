@@ -2,7 +2,7 @@ use std::{
     fmt::{Debug, Display},
     io::Cursor,
 };
-
+use std::io::Read;
 use anyhow::{anyhow, Result};
 use bit_struct::*;
 use byteorder::ReadBytesExt;
@@ -385,7 +385,8 @@ impl TryFrom<Bytes> for Asdu {
         let orig_addr = rdr.read_u8()?;
         // 尝试读取一个 u16
         let common_addr = rdr.read_u16::<byteorder::LittleEndian>()?;
-        let mut bytes = bytes;
+        let mut raw = Vec::new();
+        rdr.read_to_end(&mut raw)?;
 
         Ok(Asdu {
             identifier: Identifier {
@@ -395,7 +396,7 @@ impl TryFrom<Bytes> for Asdu {
                 orig_addr,
                 common_addr,
             },
-            raw: bytes.split_off(IDENTIFIER_SIZE),
+            raw: Bytes::from(raw),
         })
     }
 }
