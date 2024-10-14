@@ -125,7 +125,7 @@ pub fn decode_cp56time2a(rdr: &mut Cursor<&Bytes>) -> Result<Option<DateTime<Utc
     }
 }
 
-// Decodecode info object byte to CP24Time2a
+// Decode info object byte to CP24Time2a
 pub fn decode_cp24time2a(rdr: &mut Cursor<&Bytes>) -> Result<Option<DateTime<Utc>>> {
     if rdr.remaining() < 3 {
         return Ok(None);
