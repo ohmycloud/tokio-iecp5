@@ -1,0 +1,52 @@
+{
+  "name": "IEC104 Studio",
+  "id": "com.ohmycloud.iec104studio",
+  "version": "0.1.0",
+  "build": 1,
+  "icon": "assets/app-client.png",
+  "capabilities": {
+    "network": {
+      "http": [
+        {
+          "host": "127.0.0.1",
+          "schemes": [
+            "http"
+          ],
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "pathPrefixes": [
+            "/api/"
+          ]
+        },
+        {
+          "host": "localhost",
+          "schemes": [
+            "http"
+          ],
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "pathPrefixes": [
+            "/api/"
+          ]
+        },
+        {
+          "host": "::1",
+          "schemes": [
+            "http"
+          ],
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "pathPrefixes": [
+            "/api/"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -22,11 +22,11 @@ pub enum Error {
     #[error("SendError {0}")]
     ErrSendRequest(#[from] tokio::sync::mpsc::error::SendError<Request>),
 
-    #[error("")]
+    #[error("Connection is closed")]
     ErrUseClosedConnection,
-    #[error("")]
+    #[error("Data transfer is not active; send STARTDT first")]
     ErrNotActive,
 
-    #[error("anyhow error")]
+    #[error("{0}")]
     ErrAnyHow(#[from] anyhow::Error),
 }

@@ -1,2 +1,7 @@
 /target
 .idea
+**/.nsh/
+ui/*.png
+/dist/
+__pycache__/
+*.py[cod]

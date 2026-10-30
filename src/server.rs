@@ -76,17 +76,54 @@ impl Server {
         F: Future<Output = io::Result<Option<(S, T)>>>,
         OnprocessError: FnOnce(Error) + Clone + Send + 'static,
     {
+        self.serve_until(on_connected, on_process_error, std::future::pending())
+            .await
+    }
+
+    /// Serves until shutdown, then closes all accepted connections.
+    pub async fn serve_until<S, T, F, OnConnected, OnprocessError>(
+        &self,
+        on_connected: &OnConnected,
+        on_process_error: OnprocessError,
+        shutdown: impl Future<Output = ()>,
+    ) -> io::Result<()>
+    where
+        S: ServerHandler + Send + Sync + 'static,
+        T: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+        OnConnected: Fn(TcpStream, SocketAddr) -> F,
+        F: Future<Output = io::Result<Option<(S, T)>>>,
+        OnprocessError: FnOnce(Error) + Clone + Send + 'static,
+    {
+        tokio::pin!(shutdown);
+        // Dropping the JoinSet also cancels sessions if the serving future is dropped.
+        let mut sessions = tokio::task::JoinSet::new();
         loop {
-            let (stream, socket_addr) = self.listener.accept().await?;
+            let (stream, socket_addr) = select! {
+                biased;
+                _ = &mut shutdown => {
+                    sessions.abort_all();
+                    while sessions.join_next().await.is_some() {}
+                    return Ok(());
+                }
+                Some(_) = sessions.join_next(), if !sessions.is_empty() => continue,
+                accepted = self.listener.accept() => accepted?,
+            };
             log::debug!("Accepted connection from {socket_addr}");
 
-            let Some((handler, transport)) = on_connected(stream, socket_addr).await? else {
+            let connected = select! {
+                _ = &mut shutdown => {
+                    sessions.shutdown().await;
+                    return Ok(());
+                }
+                connected = on_connected(stream, socket_addr) => connected?,
+            };
+            let Some((handler, transport)) = connected else {
                 log::debug!("No ServerHandler for connection from {socket_addr}");
                 continue;
             };
             let on_process_error = on_process_error.clone();
 
-            tokio::spawn(async move {
+            sessions.spawn(async move {
                 log::debug!("Processing requests from {socket_addr}");
                 let mut session = ServerSession::new();
                 if let Err(err) = session.run(transport, handler).await {
@@ -144,10 +181,9 @@ impl ServerSession {
                     }
 
                     if  ack_sendsn != send_sn &&
-                        Utc::now() - Duration::from_secs(15) >= pending[0].send_time {
+                        pending.front().is_some_and(|p| Utc::now() - Duration::from_secs(15) >= p.send_time) {
                         log::warn!("[CHECK TIMER] send ack [sq:{ack_sendsn}] timeout");
-                        ack_sendsn += 1;
-                        pending.pop_front();
+                        break 'outer;
                     }
 
                     if ack_rcvsn != rcv_sn && (un_ack_rcv_since + Duration::from_secs(10) <= Utc::now() ||
@@ -182,7 +218,7 @@ impl ServerSession {
                                         send_time: Utc::now()
                                     });
                                     ack_rcvsn = rcv_sn;
-                                    send_sn  = (send_sn + 1) % 32767;
+                                    send_sn = (send_sn + 1) % 32768;
                                 }
                             },
                             Request::U(uapci) => {
@@ -232,6 +268,11 @@ impl ServerSession {
                                 }
 
 
+                                // Advance before dispatch: rejected commands still consume an I-frame.
+                                rcv_sn = (iapci.send_sn + 1) % 32768;
+                                if !is_active {
+                                    return Err(Error::ErrNotActive);
+                                }
                                 if let Some(asdu) = apdu.asdu {
                                     let mut asdu = asdu;
                                     let ca = asdu.identifier.common_addr;
@@ -297,7 +338,6 @@ impl ServerSession {
                                     }
                                 }
 
-                                rcv_sn = (iapci.send_sn + 1) % 32767;
                             }
                             ApciKind::U(uapci) => {
                                 log::debug!("[RX] U-frame: {apdu}");

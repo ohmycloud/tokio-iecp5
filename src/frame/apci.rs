@@ -112,7 +112,9 @@ impl From<Apci> for ApciKind {
 pub fn new_iframe(asdu: Asdu, send_sn: u16, rcv_sn: u16) -> Apdu {
     let apci = Apci {
         start: START_FRAME,
-        apdu_length: APCICTL_FIELD_SIZE as u8 + IDENTIFIER_SIZE as u8 + asdu.raw.len() as u8,
+        // Oversized payloads are rejected by Codec::encode, not by arithmetic panic here.
+        apdu_length: u8::try_from(APCICTL_FIELD_SIZE + IDENTIFIER_SIZE + asdu.raw.len())
+            .unwrap_or(u8::MAX),
         ctrl1: (send_sn << 1) as u8,
         ctrl2: (send_sn >> 7) as u8,
         ctrl3: (rcv_sn << 1) as u8,
@@ -175,7 +177,7 @@ pub fn update_ack_no_out(
 
     for i in 0..pending.len() {
         if let Some(p) = pending.pop_front() {
-            if p.seq == ack_no - 1 {
+            if p.seq == (ack_no.wrapping_sub(1) & 0x7fff) {
                 break;
             }
         }

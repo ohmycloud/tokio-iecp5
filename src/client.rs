@@ -55,6 +55,7 @@ pub struct Client<S> {
     handler: S,
     is_active: Arc<Mutex<bool>>,
     sender: Arc<Mutex<Option<mpsc::UnboundedSender<Request>>>>,
+    task: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -85,31 +86,39 @@ where
             handler,
             is_active: Arc::new(Mutex::new(false)),
             sender: Arc::new(Mutex::new(None)),
+            task: Mutex::new(None),
         }
     }
 
-    // TODO: 防止上层连续调用，导致重复建立连接
+    /// Idempotent even while a connection attempt or reconnect is in flight.
     pub async fn start(&self) -> Result<(), Error> {
-        if self.is_connected().await {
+        let mut task = self.task.lock().await;
+        if task.as_ref().is_some_and(|t| !t.is_finished()) {
             return Ok(());
         }
-
-        tokio::spawn(client_loop(
-            self.is_active.clone(),
-            self.sender.clone(),
-            self.handler.clone(),
-            self.op,
-        ));
-
+        let active = self.is_active.clone();
+        let sender = self.sender.clone();
+        let handler = self.handler.clone();
+        let op = self.op;
+        *task = Some(tokio::spawn(async move {
+            if let Err(err) = client_loop(active.clone(), sender.clone(), handler, op).await {
+                log::warn!("Client stopped: {err}");
+            }
+            *active.lock().await = false;
+            sender.lock().await.take();
+        }));
         Ok(())
     }
 
-    pub async fn stop(&mut self) {
-        if !self.is_connected().await {
-            if let Some(sender) = self.sender.lock().await.take() {
-                sender.closed().await;
-            }
+    /// Cancels connecting, reconnecting and established sessions, and closes TCP.
+    pub async fn stop(&self) {
+        let mut task = self.task.lock().await;
+        if let Some(handle) = task.take() {
+            handle.abort();
+            let _ = handle.await;
         }
+        self.sender.lock().await.take();
+        *self.is_active.lock().await = false;
     }
 
     pub async fn is_connected(&self) -> bool {
@@ -151,6 +160,13 @@ where
         .await
     }
 
+    pub async fn send_test_fr(&self) -> Result<(), Error> {
+        self.send(Request::U(UApci {
+            function: U_TESTFR_ACTIVE,
+        }))
+        .await
+    }
+
     pub async fn send_stop_dt(&self) -> Result<(), Error> {
         if !self.is_connected().await {
             return Err(Error::ErrUseClosedConnection);
@@ -172,7 +188,7 @@ where
             }
             Ok(())
         } else {
-            Err(Error::ErrAnyHow(anyhow::anyhow!("sender not exist")))
+            Err(Error::ErrUseClosedConnection)
         }
     }
 }
@@ -296,10 +312,18 @@ where
 
             let mut pending: VecDeque<SeqPending> = VecDeque::new();
 
-            let transport = TcpStream::connect(op.socket_addr).await;
+            let transport =
+                tokio::time::timeout(Duration::from_secs(10), TcpStream::connect(op.socket_addr))
+                    .await
+                    .unwrap_or_else(|_| {
+                        Err(std::io::Error::new(
+                            std::io::ErrorKind::TimedOut,
+                            "TCP connect timeout",
+                        ))
+                    });
             if transport.is_err() {
                 if !op.auto_reconnect {
-                    return Err(Error::ErrAnyHow(anyhow::anyhow!("connect error")));
+                    return Err(transport.expect_err("connection failed").into());
                 }
                 sleep(Duration::from_secs(60)).await;
                 continue;
@@ -320,10 +344,9 @@ where
                         }
 
                         if  ack_sendsn != send_sn &&
-                            Utc::now() - Duration::from_secs(15) >= pending[0].send_time {
+                            pending.front().is_some_and(|p| Utc::now() - Duration::from_secs(15) >= p.send_time) {
                             log::warn!("[CHECK TIMER] send ack [sq:{ack_sendsn}] timeout");
-                            ack_sendsn += 1;
-                            pending.pop_front();
+                            break 'outer;
                         }
 
                         if ack_rcvsn != rcv_sn && (un_ack_rcv_since + Duration::from_secs(10) <= Utc::now() ||
@@ -366,13 +389,14 @@ where
                                             send_time: Utc::now()
                                         });
                                         ack_rcvsn = rcv_sn;
-                                        send_sn  = (send_sn + 1) % 32767;
+                                        send_sn = (send_sn + 1) % 32768;
                                     }
                                 },
                                 Request::U(uapci) => {
                                     match uapci.function {
                                         U_STARTDT_ACTIVE => start_dt_active_send_since = Utc::now(),
                                         U_STOPDT_ACTIVE => stop_dt_active_send_since = Utc::now(),
+                                        U_TESTFR_ACTIVE => test4alive_send_since = Utc::now(),
                                         _ => ()
 
                                     }
@@ -438,7 +462,7 @@ where
                                         }
                                     }
 
-                                    rcv_sn = (iapci.send_sn + 1) % 32767;
+                                    rcv_sn = (iapci.send_sn + 1) % 32768;
                                 }
                                 ApciKind::U(uapci) => {
                                     log::debug!("[RX] U-frame: {apdu}");
@@ -486,6 +510,19 @@ where
                 }
             }
             *is_active.lock().await = false;
+            sender.lock().await.take();
+            if !op.auto_reconnect {
+                return Ok(());
+            }
+            sleep(Duration::from_secs(1)).await;
+        }
+    }
+}
+
+impl<S> Drop for Client<S> {
+    fn drop(&mut self) {
+        if let Some(task) = self.task.get_mut().take() {
+            task.abort();
         }
     }
 }

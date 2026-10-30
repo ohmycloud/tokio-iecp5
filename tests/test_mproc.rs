@@ -1,10 +1,9 @@
+use anyhow::Result;
+use bit_struct::*;
 use bytes::Bytes;
 use chrono::{Datelike, TimeZone, Timelike, Utc};
-use tokio_test::{assert_err, assert_ok};
 use tokio_iecp5::asdu::*;
 use tokio_iecp5::mproc::*;
-use bit_struct::*;
-use anyhow::Result;
 use tokio_iecp5::Error;
 
 #[test]
@@ -84,8 +83,8 @@ fn decode_singlepiont() -> Result<()> {
                 common_addr: 0,
             },
             raw: Bytes::from_static(&[
-                0x01, 0x00, 0x00, 0x11, 0x01, 0x02, 0x03, 0x04, 0x65, 0x06, 0x13, 0x02, 0x00,
-                0x00, 0x10, 0x01, 0x02, 0x03, 0x04, 0x65, 0x06, 0x13,
+                0x01, 0x00, 0x00, 0x11, 0x01, 0x02, 0x03, 0x04, 0x65, 0x06, 0x13, 0x02, 0x00, 0x00,
+                0x10, 0x01, 0x02, 0x03, 0x04, 0x65, 0x06, 0x13,
             ]),
         },
         want: vec![
@@ -113,8 +112,7 @@ fn decode_singlepiont() -> Result<()> {
                 common_addr: 0,
             },
             raw: Bytes::from_static(&[
-                0x01, 0x00, 0x00, 0x11, 0x01, 0x02, 0x03, 0x02, 0x00, 0x00, 0x10, 0x01, 0x02,
-                0x03,
+                0x01, 0x00, 0x00, 0x11, 0x01, 0x02, 0x03, 0x02, 0x00, 0x00, 0x10, 0x01, 0x02, 0x03,
             ]),
         },
         want: vec![
@@ -133,7 +131,7 @@ fn decode_singlepiont() -> Result<()> {
 
     for mut t in tests {
         let result = t.asdu.get_single_point()?;
-        assert_eq!(result, t.want);
+        assert_eq!(result, t.want, "{}", t.name);
     }
     Ok(())
 }
@@ -161,8 +159,8 @@ fn decode_measured_value_float() -> Result<()> {
                 common_addr: 0,
             },
             raw: Bytes::from_iter([
-                0x01, 0x00, 0x00, r1[0], r1[1], r1[2], r1[3], 0x10, 0x02, 0x00, 0x00, r2[0],
-                r2[1], r2[2], r2[3], 0x10,
+                0x01, 0x00, 0x00, r1[0], r1[1], r1[2], r1[3], 0x10, 0x02, 0x00, 0x00, r2[0], r2[1],
+                r2[2], r2[3], 0x10,
             ]),
         },
         want: vec![
@@ -212,7 +210,7 @@ fn decode_measured_value_float() -> Result<()> {
     });
     for mut t in tests {
         let result = t.asdu.get_measured_value_float()?;
-        assert_eq!(result, t.want);
+        assert_eq!(result, t.want, "{}", t.name);
     }
     Ok(())
 }
@@ -328,19 +326,13 @@ fn test_single() -> Result<()> {
                 let want_bytes = t.args.want_bytes;
                 if raw != want_bytes {
                     return Err(Error::ErrAnyHow(anyhow::anyhow!(
-                            "expected: {want_bytes:?}, result: {raw:?}"
-                        )));
+                        "expected: {want_bytes:?}, result: {raw:?}"
+                    )));
                 }
                 Ok(())
             });
 
-        if r.is_err() != t.want_err {
-            if t.want_err {
-                assert_err!(r);
-            } else {
-                assert_ok!(r);
-            }
-        }
+        assert_eq!(r.is_err(), t.want_err, "{}: {r:?}", t.name);
     }
 
     Ok(())

@@ -1,12 +1,11 @@
-use std::{
-    fmt::{Debug, Display},
-    io::Cursor,
-};
-use std::io::Read;
 use anyhow::{anyhow, Result};
 use bit_struct::*;
 use byteorder::ReadBytesExt;
 use bytes::{BufMut, Bytes, BytesMut};
+use std::{
+    fmt::{Debug, Display},
+    io::Cursor,
+};
 
 // ASDUSizeMax asdu max size
 pub(crate) const ASDU_SIZE_MAX: usize = 249;
@@ -106,9 +105,9 @@ enums! {
         Deactivation,               // 停止激活 （遥控、参数设置 控制方向）
         DeactivationCon,            // 停止激活确认（遥控、参数设置 监视方向）
         ActivationTerm,             // 激活终止 （遥控 监视方向）
-        FileTransfer,               // 文件传输
-        ReturnInfoRemote,           // 远程信息返回
-        ReturnInfoLocal,            // 本地信息返回
+        ReturnInfoRemote,           // 11: 远程信息返回
+        ReturnInfoLocal,            // 12: 本地信息返回
+        FileTransfer,               // 13: 文件传输
         Authentication,             // 认证
         SessionKey,                 // 会话密钥
         UserRoleAndUpdateKey,       // 用户角色和更新密钥
@@ -385,8 +384,7 @@ impl TryFrom<Bytes> for Asdu {
         let orig_addr = rdr.read_u8()?;
         // 尝试读取一个 u16
         let common_addr = rdr.read_u16::<byteorder::LittleEndian>()?;
-        let mut raw = Vec::new();
-        rdr.read_to_end(&mut raw)?;
+        // 保留 Bytes 的共享存储，避免为 ASDU payload 再分配内存。
 
         Ok(Asdu {
             identifier: Identifier {
@@ -396,7 +394,7 @@ impl TryFrom<Bytes> for Asdu {
                 orig_addr,
                 common_addr,
             },
-            raw: Bytes::from(raw),
+            raw: bytes.slice(IDENTIFIER_SIZE..),
         })
     }
 }

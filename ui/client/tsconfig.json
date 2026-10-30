@@ -1,0 +1,9 @@
+{
+  "extends": "./.nsh/tsconfig.json",
+  "include": [
+    "App.tsx",
+    "../shared/**/*.ts",
+    "../shared/**/*.tsx",
+    ".nsh/types/**/*.d.ts"
+  ]
+}
